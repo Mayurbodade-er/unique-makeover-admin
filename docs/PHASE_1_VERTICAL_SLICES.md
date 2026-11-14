@@ -155,19 +155,44 @@ class UpdateOperationsUseCase @Inject constructor(
 10. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/OperationsSection.kt`
     - **Architectural Role:** Presentation (Compose Component)
     - **Why Created:** Interactive operations configuration form featuring time pickers, segmented slot duration chips (15/30/45/60 min), and dynamic staff roster management.
-11. `app/src/test/java/com/uniquemakeover/admin/core/util/SlotTimeCalculatorTest.kt`
+11. `app/src/main/java/com/uniquemakeover/admin/core/ui/components/AppScaffold.kt`
+    - **Architectural Role:** Core Presentation (Universal Scaffold Component)
+    - **Why Created:** Implements the luxury 5-item responsive navigation shell (`Dashboard`, `Appointments`, `Services`, `Reminders`, `Settings`) adhering strictly to `desing.md` (§2); renders Material 3 `NavigationBar` on phones (< 600dp) and `NavigationRail` on foldables/tablets (>= 600dp) with brand palette tokens (`BrandPrimary`, `BlushSurface`, `SurfaceCard`).
+12. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsUiState.kt`
+    - **Architectural Role:** Presentation (UI State)
+    - **Why Created:** Immutable presentation state model for the Settings screen tracking loading status, active `OperationsConfig`, and user feedback messages (`UiText`).
+13. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsViewModel.kt`
+    - **Architectural Role:** Presentation (ViewModel)
+    - **Why Created:** Hilt-injected ViewModel managing UI state via `StateFlow` and orchestrating operating hours and staff roster mutations through `GetOperationsConfigUseCase` and `UpdateOperationsUseCase`.
+14. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsScreen.kt`
+    - **Architectural Role:** Presentation (Compose Screen & Route)
+    - **Why Created:** Primary Settings destination hosted on `Routes.Settings`, providing luxury app bar, snackbar messaging, and hosting `OperationsSection` with reactive state.
+15. `app/src/test/java/com/uniquemakeover/admin/core/util/SlotTimeCalculatorTest.kt`
     - **Architectural Role:** Automated JVM Unit Test
     - **Why Created:** Validates minute calculation, formatting, and edge bounds (midnight, noon, 24h clock conversions).
-12. `app/src/test/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateOperationsUseCaseTest.kt`
+16. `app/src/test/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateOperationsUseCaseTest.kt`
     - **Architectural Role:** Automated JVM Unit Test
     - **Why Created:** Tests validation boundaries (`close <= open`, `slot <= 0`, window too small) and staff sanitization.
-13. `app/src/test/java/com/uniquemakeover/admin/feature/settings/data/SettingsDaoTest.kt`
+17. `app/src/test/java/com/uniquemakeover/admin/feature/settings/data/SettingsDaoTest.kt`
     - **Architectural Role:** Automated JVM / Robolectric Test
     - **Why Created:** Verifies singleton row updates and ensures PIN hash and branding fields are preserved.
+18. `app/src/test/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsViewModelTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Verifies `SettingsViewModel` reactive state flow, successful operations configuration persistence, validation error propagation, and message clearing.
+19. `app/src/test/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsScreenTest.kt`
+    - **Architectural Role:** Automated Compose UI Test
+    - **Why Created:** Tests `SettingsScreen` UI rendering of headers, time pickers, chip groups, and save button interaction.
+20. `app/src/test/java/com/uniquemakeover/admin/core/ui/components/AppScaffoldTest.kt`
+    - **Architectural Role:** Automated Compose UI Test
+    - **Why Created:** Verifies responsive rendering of 5 navigation items on phone (< 600dp), navigation rail on tablet (>= 600dp), and tab navigation callbacks.
 
 #### Files Modified:
 1. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
    - **Why Modified:** Bound `SettingsRepositoryImpl` to `SettingsRepository`.
+2. `app/src/main/java/com/uniquemakeover/admin/navigation/Routes.kt`
+   - **Why Modified:** Registered navigation constants for `Dashboard`, `Appointments`, `Reminders`, and `Settings`.
+3. `app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt`
+   - **Why Modified:** Integrated `AppScaffold` with responsive bottom bar / rail navigation, wired `SettingsRoute` to `Routes.Settings`, and introduced clean placeholder destinations for unbuilt tabs.
 
 ---
 
