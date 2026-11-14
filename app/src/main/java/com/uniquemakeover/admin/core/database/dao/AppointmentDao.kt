@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.uniquemakeover.admin.core.database.entity.AppointmentEntity
+import com.uniquemakeover.admin.core.database.model.ClientProfileAggregate
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -97,6 +98,23 @@ interface AppointmentDao {
             "WHERE date >= :today AND status != 'cancelled' AND (serviceIds LIKE '%\"' || :serviceId || '\"%')"
     )
     suspend fun countUpcomingAppointmentsForService(serviceId: String, today: String): Int
+
+    @Query(
+        """
+        SELECT 
+            a.phone,
+            (SELECT a2.name FROM appointments a2 WHERE a2.phone = a.phone ORDER BY a2.bookedAt DESC LIMIT 1) as name,
+            COUNT(CASE WHEN LOWER(a.status) NOT IN ('cancel', 'cancelled') THEN 1 END) as totalVisits,
+            COALESCE(SUM(CASE WHEN LOWER(a.status) NOT IN ('cancel', 'cancelled') THEN a.rate ELSE 0 END), 0) as totalSpend,
+            MAX(a.date) as lastVisitDate,
+            (SELECT a3.svc FROM appointments a3 WHERE a3.phone = a.phone ORDER BY a3.bookedAt DESC LIMIT 1) as lastServices,
+            MAX(a.bookedAt) as maxBookedAt
+        FROM appointments a
+        GROUP BY a.phone
+        ORDER BY maxBookedAt DESC
+        """
+    )
+    fun observeClientProfiles(): Flow<List<ClientProfileAggregate>>
 
     @Query("SELECT COUNT(*) FROM appointments")
     suspend fun count(): Int

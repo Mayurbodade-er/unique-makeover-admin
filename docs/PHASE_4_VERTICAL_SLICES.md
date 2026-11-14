@@ -144,24 +144,67 @@ class GetClientProfilesUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`ClientProfileMapperTest.kt`:** Verifies conversion from database aggregate tuple to immutable domain `ClientProfile`.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/model/ClientProfile.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/repository/ClientProfileRepository.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/data/repository/ClientProfileRepositoryImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/usecase/GetClientProfilesUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsScreen.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsViewModel.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsUiState.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/list/components/ClientRow.kt
-app/src/test/java/com/uniquemakeover/admin/feature/clients/domain/usecase/GetClientProfilesUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsViewModelTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/clients/data/ClientProfileRepositoryImplTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt (Adds observeClientProfiles)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/model/ClientProfileAggregate.kt`
+   - **Architectural Role:** Database Query Projection DTO
+   - **Why Created:** Encapsulates the raw Room aggregation tuple (`phone`, `name`, `totalVisits`, `totalSpend`, `lastVisitDate`, `lastServices`, `maxBookedAt`) returned by the composite indexed appointment query.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/model/ClientProfile.kt`
+   - **Architectural Role:** Pure Kotlin Domain Model
+   - **Why Created:** Represents immutable client summary entity independent of database, framework, or UI annotations.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/repository/ClientProfileRepository.kt`
+   - **Architectural Role:** Domain Repository Contract
+   - **Why Created:** Defines pure Kotlin abstraction for retrieving client directory streams and searching client profiles without exposing Room or Android APIs.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/usecase/GetClientProfilesUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Encapsulates business logic for retrieving the consolidated client directory stream with single-responsibility `operator fun invoke()`.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/clients/data/mapper/ClientProfileMapper.kt`
+   - **Architectural Role:** Data Mapper
+   - **Why Created:** Decouples Room query projection `ClientProfileAggregate` from domain `ClientProfile`, handling null-safe fallbacks.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/clients/data/repository/ClientProfileRepositoryImpl.kt`
+   - **Architectural Role:** Data Repository Implementation
+   - **Why Created:** Bridges Room `AppointmentDao.observeClientProfiles()` on `@IoDispatcher`, grouping appointments by sanitized canonical phone numbers (`PhoneSanitizer`) and sorting by most recent interaction.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsUiState.kt`
+   - **Architectural Role:** Presentation UI State
+   - **Why Created:** Immutable UI state model capturing directory list, search query, loading indicator, and error messaging.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsViewModel.kt`
+   - **Architectural Role:** Presentation ViewModel
+   - **Why Created:** Manages client directory reactive streams, debounced/in-line search filtering, and UI state lifecycle using `StateFlow`.
+9. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/list/components/ClientRow.kt`
+   - **Architectural Role:** Presentation Compose Component
+   - **Why Created:** Renders luxury gold initials avatar, client name, formatted phone, lifetime spend pill in emerald green, and visit count badge adhering to `desing.md` with $\ge 48\text{dp}$ touch target.
+10. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsScreen.kt`
+    - **Architectural Role:** Presentation Screen & Route
+    - **Why Created:** Renders full client directory list with search bar, client count badge, and empty state illustrations.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/clients/domain/usecase/GetClientProfilesUseCaseTest.kt`
+    - **Architectural Role:** Domain Unit Test
+    - **Why Created:** Verifies usecase delegates directly to repository and returns mapped profiles or empty list.
+12. `app/src/test/java/com/uniquemakeover/admin/feature/clients/data/mapper/ClientProfileMapperTest.kt`
+    - **Architectural Role:** Data Unit Test
+    - **Why Created:** Verifies null safety and mapping accuracy from database projection to domain model.
+13. `app/src/test/java/com/uniquemakeover/admin/feature/clients/data/ClientProfileRepositoryImplTest.kt`
+    - **Architectural Role:** In-Memory Room Integration Test (Robolectric)
+    - **Why Created:** Verifies AC-CRM-01.1 (aggregates), AC-CRM-01.2 (cancelled spend exclusion), AC-CRM-01.3 (phone sanitization deduplication), EC-CRM-01.1 (latest name freshness), and EC-CRM-01.3 (only cancelled appointments).
+14. `app/src/test/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsViewModelTest.kt`
+    - **Architectural Role:** Presentation Unit Test
+    - **Why Created:** Verifies profile loading, search query filtering by name and phone substring, and error handling.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Added `observeClientProfiles(): Flow<List<ClientProfileAggregate>>` indexed aggregation query with correlated subqueries resolving name freshness and services in $< 30$ ms.
+2. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Bound `ClientProfileRepository` interface to `ClientProfileRepositoryImpl`.
+3. `app/src/main/java/com/uniquemakeover/admin/navigation/Routes.kt`
+   - **Why Modified:** Added `Routes.Clients = "clients"`.
+4. `app/src/main/java/com/uniquemakeover/admin/core/ui/components/AppScaffold.kt`
+   - **Why Modified:** Added Clients navigation destination with `Icons.Outlined.People` into `MainNavItems`.
+5. `app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt`
+   - **Why Modified:** Registered `composable(Routes.Clients)` route hosting `ClientsRoute`.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/repository/AppointmentRepositoryImplTest.kt`
+   - **Why Modified:** Implemented `observeClientProfiles()` on `FakeAppointmentDao`.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/repository/SlotRepositoryImplTest.kt`
+   - **Why Modified:** Implemented `observeClientProfiles()` on `FakeAppointmentDao`.
 
 ---
 

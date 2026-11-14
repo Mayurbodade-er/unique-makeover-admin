@@ -18,6 +18,7 @@ import com.uniquemakeover.admin.core.ui.components.AppScaffold
 import com.uniquemakeover.admin.core.ui.theme.TextMuted
 import com.uniquemakeover.admin.feature.appointments.presentation.AppointmentsRoute
 import com.uniquemakeover.admin.feature.auth.presentation.PinLockRoute
+import com.uniquemakeover.admin.feature.clients.presentation.list.ClientsRoute
 import com.uniquemakeover.admin.feature.dashboard.presentation.DashboardRoute
 import com.uniquemakeover.admin.feature.services.presentation.ServicesRoute
 import com.uniquemakeover.admin.feature.settings.presentation.SettingsRoute
@@ -91,6 +92,12 @@ private fun UniqueMakeoverNavGraph(
 
         composable(Routes.Services) {
             ServicesRoute(
+                viewModel = hiltViewModel()
+            )
+        }
+
+        composable(Routes.Clients) {
+            ClientsRoute(
                 viewModel = hiltViewModel()
             )
         }

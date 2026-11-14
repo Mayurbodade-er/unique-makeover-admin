@@ -2,6 +2,7 @@ package com.uniquemakeover.admin.feature.appointments.data.repository
 
 import com.uniquemakeover.admin.core.database.dao.AppointmentDao
 import com.uniquemakeover.admin.core.database.entity.AppointmentEntity
+import com.uniquemakeover.admin.core.database.model.ClientProfileAggregate
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
 import kotlinx.coroutines.flow.Flow
@@ -184,6 +185,9 @@ class AppointmentRepositoryImplTest {
                 it.date >= today && it.status != "cancelled" && it.serviceIds.contains(serviceId)
             }
         }
+
+        override fun observeClientProfiles(): Flow<List<ClientProfileAggregate>> =
+            flowOf(emptyList())
 
         override suspend fun count(): Int = storedEntities.size
     }

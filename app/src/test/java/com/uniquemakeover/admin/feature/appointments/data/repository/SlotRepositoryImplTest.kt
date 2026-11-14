@@ -2,6 +2,7 @@ package com.uniquemakeover.admin.feature.appointments.data.repository
 
 import com.uniquemakeover.admin.core.database.dao.AppointmentDao
 import com.uniquemakeover.admin.core.database.entity.AppointmentEntity
+import com.uniquemakeover.admin.core.database.model.ClientProfileAggregate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -64,6 +65,9 @@ class SlotRepositoryImplTest {
         override suspend fun delete(appointment: AppointmentEntity) = Unit
         override suspend fun deleteById(id: String): Int = 1
         override suspend fun countUpcomingAppointmentsForService(serviceId: String, today: String): Int = 0
+        override fun observeClientProfiles(): Flow<List<ClientProfileAggregate>> =
+            emptyFlow()
+
         override suspend fun count(): Int = 0
     }
 }

@@ -10,6 +10,8 @@ import com.uniquemakeover.admin.feature.appointments.domain.repository.Appointme
 import com.uniquemakeover.admin.feature.appointments.domain.repository.SlotRepository
 import com.uniquemakeover.admin.feature.auth.data.PinRepositoryImpl
 import com.uniquemakeover.admin.feature.auth.domain.repository.PinRepository
+import com.uniquemakeover.admin.feature.clients.data.repository.ClientProfileRepositoryImpl
+import com.uniquemakeover.admin.feature.clients.domain.repository.ClientProfileRepository
 import com.uniquemakeover.admin.feature.services.data.image.LocalImageStore
 import com.uniquemakeover.admin.feature.services.data.repository.ServiceRepositoryImpl
 import com.uniquemakeover.admin.feature.services.domain.repository.ImageStorageRepository
@@ -59,6 +61,12 @@ abstract class RepositoryModule {
     abstract fun bindAppointmentRepository(
         appointmentRepositoryImpl: AppointmentRepositoryImpl
     ): AppointmentRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindClientProfileRepository(
+        clientProfileRepositoryImpl: ClientProfileRepositoryImpl
+    ): ClientProfileRepository
 
     @Binds
     @Singleton

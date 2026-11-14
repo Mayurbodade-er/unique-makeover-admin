@@ -11,6 +11,7 @@ import androidx.compose.material.icons.outlined.ContentCut
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -44,6 +45,7 @@ val MainNavItems = listOf(
     NavItem(Routes.Dashboard, "Dashboard", Icons.Outlined.Dashboard),
     NavItem(Routes.Appointments, "Appointments", Icons.Outlined.Event),
     NavItem(Routes.Services, "Services", Icons.Outlined.ContentCut),
+    NavItem(Routes.Clients, "Clients", Icons.Outlined.People),
     NavItem(Routes.Reminders, "Reminders", Icons.Outlined.Notifications),
     NavItem(Routes.Settings, "Settings", Icons.Outlined.Settings)
 )
