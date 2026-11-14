@@ -4,9 +4,11 @@ import com.uniquemakeover.admin.core.domain.model.AppointmentStatus
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 interface AppointmentRepository {
     fun getAllAppointments(): Flow<List<Appointment>>
+    fun getAppointmentsByPhone(phone: String): Flow<List<Appointment>> = emptyFlow()
     fun getAppointmentsByDate(date: String): Flow<List<Appointment>>
     suspend fun getAppointmentsByDateSync(date: String): List<Appointment>
     suspend fun getAppointmentById(id: String): Appointment?

@@ -35,7 +35,13 @@ interface AppointmentDao {
     @Query("SELECT * FROM appointments WHERE id = :id LIMIT 1")
     suspend fun getAppointmentByIdSync(id: String): AppointmentEntity?
 
-    @Query("SELECT * FROM appointments WHERE phone = :phone ORDER BY date DESC, time DESC")
+    @Query(
+        """
+        SELECT * FROM appointments 
+        WHERE phone = :phone OR phone = '+91' || :phone OR phone LIKE '%' || :phone
+        ORDER BY date DESC, time DESC
+        """
+    )
     fun getAppointmentsByPhone(phone: String): Flow<List<AppointmentEntity>>
 
     @Query(

@@ -25,6 +25,12 @@ class AppointmentRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getAppointmentsByPhone(phone: String): Flow<List<Appointment>> {
+        return appointmentDao.getAppointmentsByPhone(phone).map { list ->
+            list.map(AppointmentMapper::toDomain)
+        }
+    }
+
     override fun getAppointmentsByDate(date: String): Flow<List<Appointment>> {
         return appointmentDao.getAppointmentsByDate(date).map { list ->
             list.map(AppointmentMapper::toDomain)

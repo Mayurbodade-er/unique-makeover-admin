@@ -420,23 +420,56 @@ class GetClientHistoryUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`ClientDetailScreenTest.kt` (Compose UI Test):** Verifies header displays client name and formatted spend correctly.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/model/ClientHistoryItem.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/usecase/GetClientHistoryUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailScreen.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailViewModel.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailUiState.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/components/ClientMetricsHeader.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/components/HistoryList.kt
-app/src/test/java/com/uniquemakeover/admin/feature/clients/domain/usecase/GetClientHistoryUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailViewModelTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/clients/presentation/ClientDetailScreenTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt (Adds getAppointmentsByPhone)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/model/ClientHistoryItem.kt`
+   - **Architectural Role:** Domain Model (Core/Clients)
+   - **Why Created:** Encapsulates the immutable appointment history record per client (`appointmentId`, `date`, `time`, `formattedServices`, `staff`, `rate`, `paid`, `balanceDue`, `status`) independent of database or presentation frameworks.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/usecase/GetClientHistoryUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Encapsulates business logic to retrieve client appointment history, enforces reverse-chronological sorting (`date DESC, time DESC`), extracts readable service names from JSON snapshots, and calculates balance due (`rate - paid`, or `0` for cancelled appointments).
+3. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailUiState.kt`
+   - **Architectural Role:** Presentation (UI State)
+   - **Why Created:** Models immutable UI state for client detail screen (`isLoading`, `clientName`, `phone`, `totalSpend`, `totalVisits`, `historyItems`, `selectedTab`, `errorMessage`).
+4. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailActions.kt`
+   - **Architectural Role:** Presentation (UI Actions)
+   - **Why Created:** Groups user action lambdas (`onNavigateBack`, `onTabSelected`, `onCallClick`, `onWhatsAppClick`, `onQuickRebookClick`) adhering to clean UI boundaries and parameter limits.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailViewModel.kt`
+   - **Architectural Role:** Presentation (ViewModel)
+   - **Why Created:** Combines appointment streams and history items from domain layer, evaluates lifetime metrics (`totalSpend` and `totalVisits` excluding cancellations), and manages UI tab state.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/components/ClientMetricsHeader.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Renders client identity card, lifetime spend/visit metric tiles, quick rebook button, and offline communication action buttons (`ACTION_DIAL` and `ACTION_VIEW` for WhatsApp) adhering to `desing.md` tokens.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/components/HistoryList.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Renders the reverse-chronological visit timeline cards displaying appointment date/time, staff chip, service snapshots, rate, paid, balance due badge, and appointment status chip.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailScreen.kt`
+   - **Architectural Role:** Presentation (Compose Screen & Route)
+   - **Why Created:** Provides the full client profile screen with top app bar, tab switching between "Visit History" and "Private Notes", and intent triggers for offline dialing and WhatsApp messaging.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/clients/domain/usecase/GetClientHistoryUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Validates reverse-chronological sorting, service snapshot mapping, and balance due calculations under normal and cancelled appointment scenarios.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailViewModelTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Tests ViewModel lifetime metric aggregations, empty appointment handling, error handling, and tab switching.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailScreenTest.kt`
+    - **Architectural Role:** Robolectric JVM Compose UI Test
+    - **Why Created:** Verifies UI layout rendering, client metrics tiles, timeline items, tab click switching, and action callback triggers.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Added `getAppointmentsByPhone(phone: String)` query with indexed phone matching to fetch client appointments in reverse-chronological order.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/repository/AppointmentRepository.kt`
+   - **Why Modified:** Declared `getAppointmentsByPhone(phone: String): Flow<List<Appointment>>` contract with default empty flow implementation for backwards compatibility across existing test fakes.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/AppointmentRepositoryImpl.kt`
+   - **Why Modified:** Implemented `getAppointmentsByPhone` to query `AppointmentDao` and map entities to domain models on `@IoDispatcher`.
+4. `app/src/main/java/com/uniquemakeover/admin/navigation/Routes.kt`
+   - **Why Modified:** Added `Routes.ClientDetail = "client_detail/{phone}"` and helper `clientDetail(phone: String)` for navigation.
+5. `app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt`
+   - **Why Modified:** Registered composable destination for `Routes.ClientDetail` route and wired client click navigation from directory screen.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/repository/AppointmentRepositoryImplTest.kt`
+   - **Why Modified:** Added unit test asserting `getAppointmentsByPhone` returns mapped appointments via fake DAO.
 
 ---
 

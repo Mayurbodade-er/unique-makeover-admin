@@ -49,6 +49,17 @@ class AppointmentRepositoryImplTest {
     }
 
     @Test
+    fun getAppointmentsByPhone_mapsEntitiesToDomainModels() = runTest(testDispatcher) {
+        val fakeDao = FakeAppointmentDao(listOf(sampleEntity))
+        val repository = AppointmentRepositoryImpl(fakeDao, testDispatcher)
+
+        val list = repository.getAppointmentsByPhone("9822001122").first()
+        assertEquals(1, list.size)
+        assertEquals("9822001122", list[0].phone)
+        assertEquals("Pooja Patil", list[0].name)
+    }
+
+    @Test
     fun insertAppointment_success_delegatesToDao() = runTest(testDispatcher) {
         val fakeDao = FakeAppointmentDao(emptyList())
         val repository = AppointmentRepositoryImpl(fakeDao, testDispatcher)

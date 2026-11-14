@@ -18,6 +18,7 @@ import com.uniquemakeover.admin.core.ui.components.AppScaffold
 import com.uniquemakeover.admin.core.ui.theme.TextMuted
 import com.uniquemakeover.admin.feature.appointments.presentation.AppointmentsRoute
 import com.uniquemakeover.admin.feature.auth.presentation.PinLockRoute
+import com.uniquemakeover.admin.feature.clients.presentation.detail.ClientDetailRoute
 import com.uniquemakeover.admin.feature.clients.presentation.list.ClientsRoute
 import com.uniquemakeover.admin.feature.dashboard.presentation.DashboardRoute
 import com.uniquemakeover.admin.feature.services.presentation.ServicesRoute
@@ -31,7 +32,7 @@ fun UniqueMakeoverNavHost(
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: startDestination
-    val showNavigation = currentRoute != Routes.PinLock
+    val showNavigation = currentRoute != Routes.PinLock && currentRoute != Routes.ClientDetail
 
     AppScaffold(
         currentRoute = currentRoute,
@@ -98,7 +99,19 @@ private fun UniqueMakeoverNavGraph(
 
         composable(Routes.Clients) {
             ClientsRoute(
-                viewModel = hiltViewModel()
+                viewModel = hiltViewModel(),
+                onClientClick = { phone ->
+                    navController.navigate(Routes.clientDetail(phone))
+                }
+            )
+        }
+
+        composable(Routes.ClientDetail) {
+            ClientDetailRoute(
+                viewModel = hiltViewModel(),
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
             )
         }
 
