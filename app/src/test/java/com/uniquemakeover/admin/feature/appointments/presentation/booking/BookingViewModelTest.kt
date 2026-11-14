@@ -1,5 +1,6 @@
 package com.uniquemakeover.admin.feature.appointments.presentation.booking
 
+import com.uniquemakeover.admin.core.domain.model.AppointmentStatus
 import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.domain.model.Service
 import com.uniquemakeover.admin.core.domain.model.Settings
@@ -175,6 +176,9 @@ class BookingViewModelTest {
         }
         override suspend fun updateAppointment(appointment: Appointment): DataResult<Unit> =
             DataResult.Success(Unit)
+        override suspend fun updateStatus(id: String, status: AppointmentStatus): DataResult<Unit> =
+            DataResult.Success(Unit)
+        override suspend fun getAppointmentById(id: String): Appointment? = insertedAppointments.find { it.id == id }
         override suspend fun deleteAppointment(appointment: Appointment): DataResult<Unit> =
             DataResult.Success(Unit)
         override suspend fun count(): Int = insertedAppointments.size

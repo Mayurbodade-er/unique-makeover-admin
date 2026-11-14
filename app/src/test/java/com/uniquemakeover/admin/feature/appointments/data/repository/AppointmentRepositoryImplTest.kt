@@ -135,6 +135,15 @@ class AppointmentRepositoryImplTest {
             if (index >= 0) storedEntities[index] = appointment
         }
 
+        override suspend fun updateStatus(id: String, status: String): Int {
+            val index = storedEntities.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                storedEntities[index] = storedEntities[index].copy(status = status)
+                return 1
+            }
+            return 0
+        }
+
         override suspend fun delete(appointment: AppointmentEntity) {
             storedEntities.removeAll { it.id == appointment.id }
         }

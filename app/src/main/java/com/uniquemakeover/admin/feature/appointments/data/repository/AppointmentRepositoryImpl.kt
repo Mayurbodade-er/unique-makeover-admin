@@ -37,6 +37,12 @@ class AppointmentRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getAppointmentById(id: String): Appointment? {
+        return withContext(ioDispatcher) {
+            appointmentDao.getAppointmentByIdSync(id)?.let(AppointmentMapper::toDomain)
+        }
+    }
+
     override fun getTodaySchedule(today: String): Flow<List<Appointment>> {
         return appointmentDao.observeTodaySchedule(today)
             .map { entities -> entities.map(AppointmentMapper::toDomain) }
@@ -76,6 +82,20 @@ class AppointmentRepositoryImpl @Inject constructor(
                 DataResult.Success(Unit)
             } catch (e: SQLException) {
                 DataResult.Error(UiText.DynamicString(e.localizedMessage ?: "Failed to update appointment"))
+            }
+        }
+    }
+
+    override suspend fun updateStatus(
+        id: String,
+        status: com.uniquemakeover.admin.core.domain.model.AppointmentStatus
+    ): DataResult<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                appointmentDao.updateStatus(id, status.value)
+                DataResult.Success(Unit)
+            } catch (e: SQLException) {
+                DataResult.Error(UiText.DynamicString(e.localizedMessage ?: "Failed to update status"))
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.uniquemakeover.admin.feature.appointments.presentation
 
+import com.uniquemakeover.admin.core.domain.model.AppointmentStatus
 import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.model.Slot
@@ -201,6 +202,9 @@ class AppointmentsViewModelTest {
         ): Flow<List<Appointment>> = flowOf(initialList)
         override suspend fun insertAppointment(appointment: Appointment): DataResult<Unit> = DataResult.Success(Unit)
         override suspend fun updateAppointment(appointment: Appointment): DataResult<Unit> = DataResult.Success(Unit)
+        override suspend fun updateStatus(id: String, status: AppointmentStatus): DataResult<Unit> =
+            DataResult.Success(Unit)
+        override suspend fun getAppointmentById(id: String): Appointment? = initialList.find { it.id == id }
         override suspend fun deleteAppointment(appointment: Appointment): DataResult<Unit> = DataResult.Success(Unit)
         override suspend fun count(): Int = initialList.size
     }

@@ -54,15 +54,13 @@ interface AppointmentDao {
     ): Flow<List<AppointmentEntity>>
 
     @Query(
-        """
-        SELECT COUNT(*) FROM appointments 
-        WHERE date = :date 
-          AND time = :time 
-          AND LOWER(status) NOT IN ('cancel', 'cancelled') 
-          AND (:excludeId IS NULL OR id != :excludeId)
-        """
+        "SELECT COUNT(*) FROM appointments WHERE date = :date AND time = :time " +
+            "AND LOWER(status) NOT IN ('cancel', 'cancelled') AND (:excludeId IS NULL OR id != :excludeId)"
     )
     suspend fun countClashingAppointments(date: String, time: String, excludeId: String? = null): Int
+
+    @Query("UPDATE appointments SET status = :status WHERE id = :id")
+    suspend fun updateStatus(id: String, status: String): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(appointment: AppointmentEntity)

@@ -528,20 +528,46 @@ class UndoAppointmentStatusUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **State Machine Contract Test:** Verifies invalid transitions (e.g. `cancel -> done` directly) are rejected by the domain layer.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/domain/model/AppointmentStatus.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/MarkAppointmentDoneUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/CancelAppointmentUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/UndoAppointmentStatusUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/core/ui/components/AppScaffold.kt
-app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/StatusLifecycleUseCaseTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentLifecycleIntegrationTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt (Adds updateStatus query)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/domain/model/AppointmentStatus.kt`
+   - **Architectural Role:** Domain Model (Core)
+   - **Why Created:** Defines the immutable status state enum (`BOOKED`, `DONE`, `CANCEL`) and sealed hierarchy `StatusUpdateResult` representing atomic outcome states independent of UI and persistence layers.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/MarkAppointmentDoneUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Implements the business logic of transitioning an appointment to `DONE`; enforces state machine transition rules preventing invalid transitions from cancelled states.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/CancelAppointmentUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Implements the business logic of cancelling an appointment; rejects direct transitions from completed states to maintain audit integrity.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/UndoAppointmentStatusUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Implements 5-second accidental tap undo logic; when reviving a cancelled appointment back to `BOOKED`, checks slot clash freedom via `SlotRepository` to prevent double-booking.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardUiEffect.kt`
+   - **Architectural Role:** Presentation (UI Effect)
+   - **Why Created:** Models one-time transient presentation side effects (such as displaying the 5-second luxury Undo snackbar with action callback).
+6. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/StatusLifecycleUseCaseTest.kt`
+   - **Architectural Role:** JVM Unit Test
+   - **Why Created:** Verifies status state machine transitions, illegal transition rejections, undo restoration, and conflict detection when slots are rebooked.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentLifecycleIntegrationTest.kt`
+   - **Architectural Role:** JVM Integration Test (Robolectric + Room SQLite)
+   - **Why Created:** End-to-end integration test asserting real database status transitions in SQLite, verifying persistence and undo guard against conflicting bookings.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Added atomic `@Query("UPDATE appointments SET status = :status WHERE id = :id") suspend fun updateStatus` and multi-line formatted clash count query.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/repository/AppointmentRepository.kt`
+   - **Why Modified:** Added `getAppointmentById(id: String)` and `updateStatus(id: String, status: AppointmentStatus)` interface contracts.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/AppointmentRepositoryImpl.kt`
+   - **Why Modified:** Implemented `getAppointmentById` and `updateStatus` queries bridging domain and database layers on `@IoDispatcher`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModel.kt`
+   - **Why Modified:** Injected status lifecycle use cases; exposed `uiEffect` SharedFlow, `markDone`, `cancel`, and `undoStatus` methods.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt`
+   - **Why Modified:** Added `DashboardSnackbarHost` rendering luxury Deep Burgundy and Gold themed snackbar with `[UNDO]` action handling.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModelTest.kt`
+   - **Why Modified:** Added unit tests verifying UI effect emission for `markDone`, `cancel`, and `undoStatus` using `UnconfinedTestDispatcher`.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardKpiIntegrationTest.kt`
+   - **Why Modified:** Updated test harness with injected lifecycle use cases for `DashboardViewModel`.
 
 ---
 

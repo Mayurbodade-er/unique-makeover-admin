@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -19,10 +20,16 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uniquemakeover.admin.core.ui.theme.BrandPrimary
+import com.uniquemakeover.admin.core.ui.theme.LuxuryGold
 import com.uniquemakeover.admin.core.ui.theme.TextMuted
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
 import com.uniquemakeover.admin.feature.appointments.presentation.booking.BookingSheet
@@ -57,19 +65,44 @@ fun DashboardRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val bookingUiState by bookingViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
     var isBookingOpen by remember { mutableStateOf(false) }
 
-    val actions = remember(context) {
+    val actions = remember(context, viewModel) {
         ScheduleCardActions(
-            onWhatsApp = { appointment ->
-                openWhatsApp(context, appointment.phone)
-            }
+            onMarkDone = { appointment -> viewModel.markDone(appointment) },
+            onCancel = { appointment -> viewModel.cancel(appointment) },
+            onWhatsApp = { appointment -> openWhatsApp(context, appointment.phone) }
         )
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.uiEffect.collect { effect ->
+            when (effect) {
+                is DashboardUiEffect.ShowUndoSnackbar -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = effect.message.asString(context),
+                        actionLabel = effect.actionLabel,
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        viewModel.undoStatus(effect.appointmentId, effect.previousStatus)
+                    }
+                }
+                is DashboardUiEffect.ShowMessage -> {
+                    snackbarHostState.showSnackbar(
+                        message = effect.message.asString(context),
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
+        }
     }
 
     DashboardScreen(
         uiState = uiState,
         actions = actions,
+        snackbarHostState = snackbarHostState,
         onOpenBooking = {
             bookingViewModel.loadInitialData()
             isBookingOpen = true
@@ -93,6 +126,7 @@ fun DashboardRoute(
 fun DashboardScreen(
     uiState: DashboardUiState,
     actions: ScheduleCardActions = ScheduleCardActions(),
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onOpenBooking: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -100,6 +134,7 @@ fun DashboardScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = WarmBackground,
         topBar = { DashboardTopBar(todayDate = uiState.todayDate) },
+        snackbarHost = { DashboardSnackbarHost(snackbarHostState) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onOpenBooking,
@@ -197,6 +232,20 @@ private fun DashboardTopBar(todayDate: String) {
 
 private const val INDIA_PHONE_DIGITS = 10
 private const val INDIA_COUNTRY_CODE = "91"
+private const val SNACKBAR_CORNER_RADIUS_DP = 12
+
+@Composable
+private fun DashboardSnackbarHost(snackbarHostState: SnackbarHostState) {
+    SnackbarHost(hostState = snackbarHostState) { data ->
+        Snackbar(
+            snackbarData = data,
+            containerColor = BrandPrimary,
+            contentColor = Color.White,
+            actionColor = LuxuryGold,
+            shape = RoundedCornerShape(SNACKBAR_CORNER_RADIUS_DP.dp)
+        )
+    }
+}
 
 private fun openWhatsApp(context: Context, rawPhone: String) {
     val digits = rawPhone.filter { it.isDigit() }

@@ -15,6 +15,10 @@ import com.uniquemakeover.admin.core.database.dao.AppointmentDao
 import com.uniquemakeover.admin.core.database.entity.AppointmentEntity
 import com.uniquemakeover.admin.core.ui.theme.UniqueMakeoverTheme
 import com.uniquemakeover.admin.feature.appointments.data.repository.AppointmentRepositoryImpl
+import com.uniquemakeover.admin.feature.appointments.data.repository.SlotRepositoryImpl
+import com.uniquemakeover.admin.feature.appointments.domain.usecase.CancelAppointmentUseCase
+import com.uniquemakeover.admin.feature.appointments.domain.usecase.MarkAppointmentDoneUseCase
+import com.uniquemakeover.admin.feature.appointments.domain.usecase.UndoAppointmentStatusUseCase
 import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetDashboardKpisUseCase
 import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetTodayScheduleUseCase
 import com.uniquemakeover.admin.testutil.FakeTimeProvider
@@ -56,9 +60,21 @@ class DashboardKpiIntegrationTest {
         fakeTimeProvider.currentDate = "2026-11-20"
 
         val repository = AppointmentRepositoryImpl(appointmentDao, Dispatchers.Unconfined)
+        val slotRepository = SlotRepositoryImpl(appointmentDao, Dispatchers.Unconfined)
         getDashboardKpisUseCase = GetDashboardKpisUseCase(repository, fakeTimeProvider)
         val getTodayScheduleUseCase = GetTodayScheduleUseCase(repository, fakeTimeProvider)
-        viewModel = DashboardViewModel(getDashboardKpisUseCase, getTodayScheduleUseCase, fakeTimeProvider)
+        val markDoneUseCase = MarkAppointmentDoneUseCase(repository)
+        val cancelUseCase = CancelAppointmentUseCase(repository)
+        val undoUseCase = UndoAppointmentStatusUseCase(repository, slotRepository)
+
+        viewModel = DashboardViewModel(
+            getDashboardKpisUseCase = getDashboardKpisUseCase,
+            getTodayScheduleUseCase = getTodayScheduleUseCase,
+            markAppointmentDoneUseCase = markDoneUseCase,
+            cancelAppointmentUseCase = cancelUseCase,
+            undoAppointmentStatusUseCase = undoUseCase,
+            timeProvider = fakeTimeProvider
+        )
     }
 
     @After

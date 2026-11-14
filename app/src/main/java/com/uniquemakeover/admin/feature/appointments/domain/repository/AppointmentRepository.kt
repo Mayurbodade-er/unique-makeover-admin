@@ -1,5 +1,6 @@
 package com.uniquemakeover.admin.feature.appointments.domain.repository
 
+import com.uniquemakeover.admin.core.domain.model.AppointmentStatus
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
 import kotlinx.coroutines.flow.Flow
@@ -8,6 +9,7 @@ interface AppointmentRepository {
     fun getAllAppointments(): Flow<List<Appointment>>
     fun getAppointmentsByDate(date: String): Flow<List<Appointment>>
     suspend fun getAppointmentsByDateSync(date: String): List<Appointment>
+    suspend fun getAppointmentById(id: String): Appointment?
     fun getTodaySchedule(today: String): Flow<List<Appointment>>
     fun getFilteredAppointments(
         status: String?,
@@ -17,6 +19,7 @@ interface AppointmentRepository {
     ): Flow<List<Appointment>>
     suspend fun insertAppointment(appointment: Appointment): DataResult<Unit>
     suspend fun updateAppointment(appointment: Appointment): DataResult<Unit>
+    suspend fun updateStatus(id: String, status: AppointmentStatus): DataResult<Unit>
     suspend fun deleteAppointment(appointment: Appointment): DataResult<Unit>
     suspend fun count(): Int
 }

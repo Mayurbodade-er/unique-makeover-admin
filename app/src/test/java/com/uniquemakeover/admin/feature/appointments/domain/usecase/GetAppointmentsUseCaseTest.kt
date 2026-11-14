@@ -1,5 +1,6 @@
 package com.uniquemakeover.admin.feature.appointments.domain.usecase
 
+import com.uniquemakeover.admin.core.domain.model.AppointmentStatus
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.core.util.PhoneSanitizer
 import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
@@ -134,6 +135,9 @@ class GetAppointmentsUseCaseTest {
 
         override suspend fun insertAppointment(appointment: Appointment): DataResult<Unit> = DataResult.Success(Unit)
         override suspend fun updateAppointment(appointment: Appointment): DataResult<Unit> = DataResult.Success(Unit)
+        override suspend fun updateStatus(id: String, status: AppointmentStatus): DataResult<Unit> =
+            DataResult.Success(Unit)
+        override suspend fun getAppointmentById(id: String): Appointment? = null
         override suspend fun deleteAppointment(appointment: Appointment): DataResult<Unit> = DataResult.Success(Unit)
         override suspend fun count(): Int = 0
     }
