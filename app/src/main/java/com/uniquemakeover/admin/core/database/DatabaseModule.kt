@@ -23,7 +23,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        seedCallback: SeedCallback
     ): UniqueMakeoverDatabase {
         return Room.databaseBuilder(
             context,
@@ -31,6 +32,7 @@ object DatabaseModule {
             UniqueMakeoverDatabase.DATABASE_NAME
         )
             .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+            .addCallback(seedCallback)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     super.onOpen(db)

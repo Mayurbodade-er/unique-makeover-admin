@@ -130,6 +130,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 
     // Instrumented Android Testing
     androidTestImplementation(libs.androidx.test.core)

@@ -338,27 +338,66 @@ data class ServicesUiState(
 ### 11. Internal Contract / Boundary Tests
 * **Mapper Contract Test (`ServiceMapperTest.kt`):** Verifies bidirectional mapping between `ServiceEntity` and domain `Service`.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/database/SeedCallback.kt
-app/src/main/java/com/uniquemakeover/admin/core/domain/model/Service.kt
-app/src/main/java/com/uniquemakeover/admin/core/domain/repository/ServiceRepository.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/data/mapper/ServiceMapper.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/data/repository/ServiceRepositoryImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/GetServicesUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesScreen.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesViewModel.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesUiState.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/components/ServiceCard.kt
-app/src/test/java/com/uniquemakeover/admin/feature/services/domain/usecase/GetServicesUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/services/presentation/ServicesViewModelTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/services/SeedCallbackTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/services/presentation/ServicesScreenTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/DatabaseModule.kt (Binds SeedCallback and ServiceRepository)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/SeedCallback.kt`
+   - **Architectural Role:** Data Layer (RoomDatabase.Callback)
+   - **Why Created:** Implements atomic initial seeding of the 7 curated parlour services on SQLite creation (`onCreate`), fulfilling AC-SVC-01.1 and AC-SVC-01.2.
+2. `app/src/main/java/com/uniquemakeover/admin/core/domain/model/Service.kt`
+   - **Architectural Role:** Pure Domain Model
+   - **Why Created:** Encapsulates the immutable salon service catalog entity (`id`, `name`, `rate`, `imagePath`, `sortOrder`) free of Android framework dependencies.
+3. `app/src/main/java/com/uniquemakeover/admin/core/domain/repository/ServiceRepository.kt`
+   - **Architectural Role:** Pure Domain Repository Interface
+   - **Why Created:** Defines the contract for streaming service lists and performing catalog CRUD operations.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/services/data/mapper/ServiceMapper.kt`
+   - **Architectural Role:** Data Layer (Mapper)
+   - **Why Created:** Handles bidirectional conversion between Room `ServiceEntity` and pure domain `Service`.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/services/data/repository/ServiceRepositoryImpl.kt`
+   - **Architectural Role:** Data Layer (Repository Implementation)
+   - **Why Created:** Bridges `ServiceDao` with `ServiceRepository` running on `@IoDispatcher`.
+6. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Architectural Role:** Core DI Module
+   - **Why Created:** Binds `ServiceRepositoryImpl` to `ServiceRepository` in the `SingletonComponent`.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/GetServicesUseCase.kt`
+   - **Architectural Role:** Pure Domain UseCase
+   - **Why Created:** Single-responsibility use case that retrieves reactive stream of services from repository.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesUiState.kt`
+   - **Architectural Role:** Presentation (UI State)
+   - **Why Created:** Immutable state container modeling `isLoading`, `services`, and `errorMessage`.
+9. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesViewModel.kt`
+   - **Architectural Role:** Presentation (ViewModel)
+   - **Why Created:** Manages catalog UI state using `stateIn(WhileSubscribed(5000))` and catches upstream exceptions.
+10. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/components/ServiceCard.kt`
+    - **Architectural Role:** Presentation (Compose Component)
+    - **Why Created:** Renders luxury salon service cards with fallback vector icons, high-contrast typography, and Indian Rupee price badge adhering to `desing.md`.
+11. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesScreen.kt`
+    - **Architectural Role:** Presentation (Compose Screen)
+    - **Why Created:** Renders responsive adaptive service grid (2 columns on Compact, 3 on Medium, 4 on Expanded), top app bar, and empty catalog state.
+12. `app/src/test/java/com/uniquemakeover/admin/testutil/MainDispatcherRule.kt`
+    - **Architectural Role:** Test Harness Utility
+    - **Why Created:** Sets up and tears down `TestDispatcher` for Coroutine `Dispatchers.Main` during ViewModel tests.
+13. `app/src/test/java/com/uniquemakeover/admin/feature/services/data/mapper/ServiceMapperTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Validates bidirectional entity-domain mapping accuracy.
+14. `app/src/test/java/com/uniquemakeover/admin/feature/services/domain/usecase/GetServicesUseCaseTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Verifies delegation of service retrieval to `ServiceRepository`.
+15. `app/src/test/java/com/uniquemakeover/admin/feature/services/presentation/ServicesViewModelTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Uses Turbine to verify loading, success, and error state transitions.
+16. `app/src/test/java/com/uniquemakeover/admin/feature/services/SeedCallbackTest.kt`
+    - **Architectural Role:** Automated JVM / Robolectric Integration Test
+    - **Why Created:** Verifies initial 7 services insertion and custom price preservation upon subsequent launches.
+17. `app/src/test/java/com/uniquemakeover/admin/feature/services/presentation/ServicesScreenTest.kt`
+    - **Architectural Role:** Automated Compose UI Test
+    - **Why Created:** Verifies UI node rendering for service names, price badges, and empty catalog state.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/DatabaseModule.kt`
+   - **Why Modified:** Injected and registered `SeedCallback` into `Room.databaseBuilder`.
+2. `app/build.gradle.kts`
+   - **Why Modified:** Added `compose.ui.test.junit4` to `testImplementation` to enable Robolectric Compose UI testing.
 
 ---
 
