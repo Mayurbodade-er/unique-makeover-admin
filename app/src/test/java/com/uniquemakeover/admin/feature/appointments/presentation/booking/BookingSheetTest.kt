@@ -4,6 +4,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import com.uniquemakeover.admin.core.domain.model.Service
 import com.uniquemakeover.admin.core.domain.model.Slot
 import com.uniquemakeover.admin.core.ui.theme.UniqueMakeoverTheme
@@ -56,7 +57,7 @@ class BookingSheetTest {
         composeTestRule.onNodeWithText("₹ 800").assertIsDisplayed()
         composeTestRule.onNodeWithText("Final Bill Rate").assertIsDisplayed()
         composeTestRule.onNodeWithText("₹ 700").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Due: ₹ 500").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Save Appointment").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Due: ₹ 500").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Save Appointment").performScrollTo().assertIsDisplayed()
     }
 }

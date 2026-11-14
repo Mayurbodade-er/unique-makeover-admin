@@ -76,11 +76,15 @@ fun DashboardRoute(
     var isBookingOpen by remember { mutableStateOf(false) }
     var paymentTarget by remember { mutableStateOf<Appointment?>(null) }
 
-    val actions = remember(context, viewModel) {
+    val actions = remember(context, viewModel, bookingViewModel) {
         ScheduleCardActions(
             onMarkDone = { viewModel.markDone(it) },
             onCancel = { viewModel.cancel(it) },
             onRecordPayment = { paymentTarget = it },
+            onEdit = { appointment ->
+                bookingViewModel.loadAppointmentForEdit(appointment.id)
+                isBookingOpen = true
+            },
             onWhatsApp = { openWhatsApp(context, it.phone) }
         )
     }

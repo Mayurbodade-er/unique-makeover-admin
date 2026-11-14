@@ -15,7 +15,12 @@ class SlotRepositoryImpl @Inject constructor(
 
     override suspend fun isClashFree(date: String, time: String, excludeId: String?): Boolean {
         return withContext(ioDispatcher) {
-            appointmentDao.countClashingAppointments(date, time, excludeId) == 0
+            val count = if (excludeId != null) {
+                appointmentDao.countClashingAppointmentsExcludingId(date, time, excludeId)
+            } else {
+                appointmentDao.countClashingAppointments(date, time, null)
+            }
+            count == 0
         }
     }
 

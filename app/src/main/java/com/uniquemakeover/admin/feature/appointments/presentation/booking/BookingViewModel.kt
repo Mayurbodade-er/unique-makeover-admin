@@ -6,7 +6,10 @@ import com.uniquemakeover.admin.core.domain.model.Service
 import com.uniquemakeover.admin.core.domain.model.Slot
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.core.util.TimeProvider
+import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
+import com.uniquemakeover.admin.feature.appointments.domain.model.BookingDraft
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.BookAppointmentUseCase
+import com.uniquemakeover.admin.feature.appointments.domain.usecase.EditAppointmentUseCase
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.GenerateAvailableSlotsUseCase
 import com.uniquemakeover.admin.feature.services.domain.usecase.GetServicesUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetOperationsConfigUseCase
@@ -25,6 +28,7 @@ class BookingViewModel @Inject constructor(
     private val getOperationsConfigUseCase: GetOperationsConfigUseCase,
     private val generateAvailableSlotsUseCase: GenerateAvailableSlotsUseCase,
     private val bookAppointmentUseCase: BookAppointmentUseCase,
+    private val editAppointmentUseCase: EditAppointmentUseCase,
     private val timeProvider: TimeProvider
 ) : ViewModel() {
 
@@ -37,7 +41,21 @@ class BookingViewModel @Inject constructor(
 
     fun loadInitialData() {
         val today = timeProvider.todayDate()
-        _uiState.update { it.copy(isLoading = true, draft = it.draft.copy(date = today)) }
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                editingAppointmentId = null,
+                isDateTimeLocked = false,
+                bookingSuccess = false,
+                generalError = null,
+                nameError = null,
+                phoneError = null,
+                serviceError = null,
+                slotError = null,
+                financialError = null,
+                draft = BookingDraft(date = today)
+            )
+        }
         viewModelScope.launch {
             val services = getServicesUseCase().first()
             val config = getOperationsConfigUseCase()
@@ -52,6 +70,63 @@ class BookingViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun loadAppointmentForEdit(appointmentId: String) {
+        _uiState.update { it.copy(isLoading = true, editingAppointmentId = appointmentId) }
+        viewModelScope.launch {
+            val appointment = editAppointmentUseCase.getAppointment(appointmentId)
+            if (appointment == null) {
+                _uiState.update { it.copy(isLoading = false, generalError = "Appointment not found") }
+                return@launch
+            }
+            populateAppointmentData(appointmentId, appointment)
+        }
+    }
+
+    private suspend fun populateAppointmentData(
+        appointmentId: String,
+        appointment: Appointment
+    ) {
+        val services = getServicesUseCase().first()
+        val config = getOperationsConfigUseCase()
+        val slots = generateAvailableSlotsUseCase(appointment.date, excludeAppointmentId = appointmentId)
+        val selected = resolveSelectedServices(services, appointment)
+        val subtotal = selected.sumOf { it.rate }
+        val discount = (subtotal - appointment.rate).coerceAtLeast(0)
+        val isLocked = appointment.status.lowercase() in LOCKED_STATUSES
+
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                availableServices = services,
+                staffList = config.staffList,
+                availableSlots = slots,
+                editingAppointmentId = appointmentId,
+                isDateTimeLocked = isLocked,
+                draft = BookingDraft(
+                    name = appointment.name,
+                    phone = appointment.phone,
+                    selectedServices = selected,
+                    date = appointment.date,
+                    time = appointment.time,
+                    staff = appointment.staff,
+                    discount = discount,
+                    advancePaid = appointment.paid,
+                    internalNote = appointment.note
+                )
+            )
+        }
+    }
+
+    private fun resolveSelectedServices(
+        allServices: List<Service>,
+        appointment: Appointment
+    ): List<Service> {
+        val byId = allServices.filter { appointment.serviceIds.contains(it.id) }
+        if (byId.isNotEmpty()) return byId
+        val names = appointment.serviceSnapshot.split("+").map { it.trim().lowercase() }
+        return allServices.filter { names.contains(it.name.lowercase()) }
     }
 
     fun updateName(name: String) {
@@ -77,15 +152,16 @@ class BookingViewModel @Inject constructor(
     }
 
     fun selectDate(date: String) {
+        val excludeId = _uiState.value.editingAppointmentId
         _uiState.update { it.copy(draft = it.draft.copy(date = date, time = ""), slotError = null) }
         viewModelScope.launch {
-            val slots = generateAvailableSlotsUseCase(date)
+            val slots = generateAvailableSlotsUseCase(date, excludeAppointmentId = excludeId)
             _uiState.update { it.copy(availableSlots = slots) }
         }
     }
 
     fun selectSlot(slot: Slot) {
-        if (slot.isAvailable) {
+        if (slot.isAvailable && !_uiState.value.isDateTimeLocked) {
             _uiState.update { it.copy(draft = it.draft.copy(time = slot.time24), slotError = null) }
         }
     }
@@ -115,19 +191,34 @@ class BookingViewModel @Inject constructor(
     }
 
     fun saveAppointment(onSuccess: () -> Unit = {}) {
-        val draft = _uiState.value.draft
+        val currentState = _uiState.value
+        val draft = currentState.draft
+        val editId = currentState.editingAppointmentId
+
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, generalError = null) }
-            when (val result = bookAppointmentUseCase(draft)) {
-                is DataResult.Success -> {
-                    _uiState.update { it.copy(isSaving = false, bookingSuccess = true) }
-                    onSuccess()
-                }
-                is DataResult.Error -> {
-                    val errorStr = result.message.toString()
-                    _uiState.update { it.copy(isSaving = false, generalError = errorStr) }
-                }
+            val error = performSave(editId, draft)
+            if (error == null) {
+                _uiState.update { it.copy(isSaving = false, bookingSuccess = true) }
+                onSuccess()
+            } else {
+                _uiState.update { it.copy(isSaving = false, generalError = error) }
             }
+        }
+    }
+
+    private suspend fun performSave(editId: String?, draft: BookingDraft): String? {
+        val result = if (editId != null) {
+            editAppointmentUseCase(editId, draft)
+        } else {
+            when (val bookRes = bookAppointmentUseCase(draft)) {
+                is DataResult.Success -> DataResult.Success(Unit)
+                is DataResult.Error -> DataResult.Error(bookRes.message)
+            }
+        }
+        return when (result) {
+            is DataResult.Success -> null
+            is DataResult.Error -> result.message.toString()
         }
     }
 
@@ -138,5 +229,9 @@ class BookingViewModel @Inject constructor(
             advance > finalRate -> "Advance cannot exceed total bill amount (₹$finalRate)"
             else -> null
         }
+    }
+
+    companion object {
+        private val LOCKED_STATUSES = setOf("done", "completed", "cancel", "cancelled")
     }
 }

@@ -15,7 +15,7 @@ class GenerateAvailableSlotsUseCase @Inject constructor(
     private val slotRepository: SlotRepository,
     private val timeProvider: TimeProvider
 ) {
-    suspend operator fun invoke(selectedDate: String): List<Slot> {
+    suspend operator fun invoke(selectedDate: String, excludeAppointmentId: String? = null): List<Slot> {
         val config = settingsRepository.getOperationsConfig()
         val openMinutes = SlotTimeCalculator.timeToMinutes(config.openTime)
         val closeMinutes = SlotTimeCalculator.timeToMinutes(config.closeTime)
@@ -27,7 +27,7 @@ class GenerateAvailableSlotsUseCase @Inject constructor(
         while (current + step <= closeMinutes) {
             val time24 = SlotTimeCalculator.minutesToTime(current)
             val time12 = SlotTimeCalculator.format12Hour(time24)
-            val reason = determineSlotUnavailability(selectedDate, current, time24)
+            val reason = determineSlotUnavailability(selectedDate, current, time24, excludeAppointmentId)
 
             slots.add(
                 Slot(
@@ -45,7 +45,8 @@ class GenerateAvailableSlotsUseCase @Inject constructor(
     private suspend fun determineSlotUnavailability(
         selectedDate: String,
         slotMinutes: Int,
-        time24: String
+        time24: String,
+        excludeAppointmentId: String?
     ): UnavailableReason? {
         val today = timeProvider.todayDate()
         val isPastDate = selectedDate < today
@@ -55,7 +56,7 @@ class GenerateAvailableSlotsUseCase @Inject constructor(
 
         return when {
             isPastTime -> UnavailableReason.PAST_TIME
-            !slotRepository.isClashFree(selectedDate, time24) -> UnavailableReason.ALREADY_BOOKED
+            !slotRepository.isClashFree(selectedDate, time24, excludeAppointmentId) -> UnavailableReason.ALREADY_BOOKED
             else -> null
         }
     }

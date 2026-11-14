@@ -1,5 +1,6 @@
 package com.uniquemakeover.admin.feature.appointments.presentation.booking
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,11 +10,14 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,7 +36,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.uniquemakeover.admin.core.domain.model.Service
 import com.uniquemakeover.admin.core.domain.model.Slot
 import com.uniquemakeover.admin.core.ui.components.PrimaryButton
 import com.uniquemakeover.admin.core.ui.theme.BorderLine
@@ -41,6 +44,7 @@ import com.uniquemakeover.admin.core.ui.theme.DangerCancel
 import com.uniquemakeover.admin.core.ui.theme.TextMuted
 import com.uniquemakeover.admin.core.ui.theme.TextPrimary
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
+import com.uniquemakeover.admin.core.ui.theme.WarningDue
 import com.uniquemakeover.admin.feature.appointments.presentation.booking.components.PaymentInputRow
 import com.uniquemakeover.admin.feature.appointments.presentation.booking.components.PaymentSummaryState
 import com.uniquemakeover.admin.feature.appointments.presentation.booking.components.ServiceMultiSelect
@@ -71,6 +75,7 @@ fun BookingSheet(
             onSelectStaff = viewModel::selectStaff,
             onDiscountChange = viewModel::updateDiscount,
             onAdvanceChange = viewModel::updateAdvance,
+            onNoteChange = viewModel::updateNote,
             onSave = { viewModel.saveAppointment(onSuccess = onDismiss) }
         )
     }
@@ -100,7 +105,10 @@ fun BookingSheetContent(
             .padding(horizontal = 20.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        BookingSheetHeader()
+        BookingSheetHeader(
+            isEditMode = uiState.isEditMode,
+            isDateTimeLocked = uiState.isDateTimeLocked
+        )
         ClientInputSection(
             uiState = uiState,
             onNameChange = actions.onNameChange,
@@ -115,10 +123,7 @@ fun BookingSheetContent(
         )
         Spacer(modifier = Modifier.height(16.dp))
         SlotSelectionSection(
-            date = uiState.draft.date,
-            slots = uiState.availableSlots,
-            selectedTime = uiState.draft.time,
-            slotError = uiState.slotError,
+            uiState = uiState,
             onSelectSlot = actions.onSelectSlot
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -130,8 +135,14 @@ fun BookingSheetContent(
         Spacer(modifier = Modifier.height(16.dp))
         PaymentSection(uiState = uiState, actions = actions)
         Spacer(modifier = Modifier.height(16.dp))
+        InternalNoteSection(
+            note = uiState.draft.internalNote,
+            onNoteChange = actions.onNoteChange
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         BookingSaveFooter(
             isSaving = uiState.isSaving,
+            isEditMode = uiState.isEditMode,
             generalError = uiState.generalError,
             onSave = actions.onSave
         )
@@ -140,15 +151,35 @@ fun BookingSheetContent(
 }
 
 @Composable
-private fun BookingSheetHeader() {
+private fun BookingSheetHeader(
+    isEditMode: Boolean,
+    isDateTimeLocked: Boolean
+) {
+    val title = if (isEditMode) "Edit Appointment" else "New Appointment"
     Text(
-        text = "New Appointment",
+        text = title,
         style = MaterialTheme.typography.titleLarge.copy(
             fontFamily = FontFamily.Serif,
             fontWeight = FontWeight.Bold
         ),
         color = BrandPrimary
     )
+    if (isDateTimeLocked) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Card(
+            colors = CardDefaults.cardColors(containerColor = WarmBackground),
+            border = BorderStroke(1.dp, WarningDue),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "To reschedule, first restore appointment status to Booked",
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                color = WarningDue,
+                modifier = Modifier.padding(10.dp)
+            )
+        }
+    }
     Spacer(modifier = Modifier.height(16.dp))
 }
 
@@ -168,6 +199,25 @@ private fun PaymentSection(
         ),
         onDiscountChange = actions.onDiscountChange,
         onAdvanceChange = actions.onAdvanceChange
+    )
+}
+
+@Composable
+private fun InternalNoteSection(
+    note: String,
+    onNoteChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = note,
+        onValueChange = onNoteChange,
+        label = { Text("Internal Note (Optional)", color = TextMuted) },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = BrandPrimary,
+            unfocusedBorderColor = BorderLine,
+            focusedTextColor = TextPrimary,
+            unfocusedTextColor = TextPrimary
+        ),
+        modifier = Modifier.fillMaxWidth()
     )
 }
 
@@ -224,29 +274,29 @@ private fun ClientInputSection(
 
 @Composable
 private fun SlotSelectionSection(
-    date: String,
-    slots: List<Slot>,
-    selectedTime: String,
-    slotError: String?,
+    uiState: BookingUiState,
     onSelectSlot: (Slot) -> Unit
 ) {
+    val date = uiState.draft.date
+    val isLocked = uiState.isDateTimeLocked
+    val title = if (isLocked) "Time Slot ($date) - Locked" else "Select Time Slot ($date)"
     Column {
         Text(
-            text = "Select Time Slot ($date)",
+            text = title,
             style = MaterialTheme.typography.labelMedium,
-            color = TextMuted
+            color = if (isLocked) WarningDue else TextMuted
         )
         Spacer(modifier = Modifier.height(8.dp))
         SlotGrid(
-            slots = slots,
-            selectedSlot = slots.firstOrNull { it.time24 == selectedTime },
-            onSlotSelected = onSelectSlot,
+            slots = uiState.availableSlots,
+            selectedSlot = uiState.availableSlots.firstOrNull { it.time24 == uiState.draft.time },
+            onSlotSelected = { if (!isLocked) onSelectSlot(it) },
             modifier = Modifier.heightIn(max = 200.dp)
         )
-        if (slotError != null) {
+        if (uiState.slotError != null) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = slotError,
+                text = uiState.slotError,
                 color = DangerCancel,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -257,9 +307,11 @@ private fun SlotSelectionSection(
 @Composable
 private fun BookingSaveFooter(
     isSaving: Boolean,
+    isEditMode: Boolean,
     generalError: String?,
     onSave: () -> Unit
 ) {
+    val buttonText = if (isEditMode) "Update Appointment" else "Save Appointment"
     Column {
         if (generalError != null) {
             Text(
@@ -270,7 +322,7 @@ private fun BookingSaveFooter(
             )
         }
         PrimaryButton(
-            text = "Save Appointment",
+            text = buttonText,
             onClick = onSave,
             isLoading = isSaving
         )

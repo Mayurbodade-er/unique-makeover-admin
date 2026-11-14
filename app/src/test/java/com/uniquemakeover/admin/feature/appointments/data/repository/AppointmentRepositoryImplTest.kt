@@ -122,6 +122,12 @@ class AppointmentRepositoryImplTest {
 
         override suspend fun countClashingAppointments(date: String, time: String, excludeId: String?): Int = 0
 
+        override suspend fun countClashingAppointmentsExcludingId(
+            date: String,
+            time: String,
+            excludeId: String
+        ): Int = 0
+
         override suspend fun insert(appointment: AppointmentEntity) {
             storedEntities.add(appointment)
         }

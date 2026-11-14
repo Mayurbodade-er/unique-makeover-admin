@@ -788,18 +788,41 @@ class EditAppointmentUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`BookingSheetEditTest.kt` (Compose UI Test):** Verifies form pre-populates existing client name and services.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/EditAppointmentUseCase.kt
-app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/EditAppointmentUseCaseTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/appointments/data/AppointmentEditClashIntegrationTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt (Adds countClashingAppointmentsExcludingId)
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingSheet.kt (Adds Edit mode support)
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingViewModel.kt (Adds loadAppointmentForEdit)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/EditAppointmentUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Encapsulates business validation for editing appointments, enforcing conflict checks with self-exclusion (`excludeId`), blocking date/time rescheduling on locked appointments (`done`/`cancelled`), recalculating rates on service changes, and preserving immutable creation metadata (`id`, `bookedAt`, `paid`).
+2. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/EditAppointmentUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Validates self-exclusion, clash rejection with third-party bookings, status-locked rescheduling guards, and financial recalculations with deterministic assertions.
+3. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/AppointmentEditClashIntegrationTest.kt`
+   - **Architectural Role:** In-Memory Room Integration Test
+   - **Why Created:** Directly verifies SQLite query `countClashingAppointmentsExcludingId` on in-memory Room database, verifying that an appointment's own slot is selectable while conflicting bookings are flagged.
+4. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingSheetEditTest.kt`
+   - **Architectural Role:** Compose UI Test
+   - **Why Created:** Verifies that edit mode dynamically displays "Edit Appointment" title, "Update Appointment" button, pre-populates existing services and client name, and renders lock notice banners for completed bookings.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Added `@Query countClashingAppointmentsExcludingId` to exclude current appointment ID from clash count during rescheduling queries.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/SlotRepositoryImpl.kt`
+   - **Why Modified:** Wired `countClashingAppointmentsExcludingId` when `excludeId` is supplied in `isClashFree`.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/GenerateAvailableSlotsUseCase.kt`
+   - **Why Modified:** Added optional `excludeAppointmentId` parameter to support slot generation with self-exclusion during appointment editing.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingUiState.kt`
+   - **Why Modified:** Added `editingAppointmentId: String? = null` and `isDateTimeLocked: Boolean = false` with helper `isEditMode`.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingActions.kt`
+   - **Why Modified:** Added `onNoteChange` callback for editing appointment notes.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingViewModel.kt`
+   - **Why Modified:** Added `loadAppointmentForEdit` method, dynamic save handling (`editAppointmentUseCase` vs `bookAppointmentUseCase`), and slot generation with self-exclusion.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingSheet.kt`
+   - **Why Modified:** Added Edit mode support with dynamic headers ("Edit Appointment"), dynamic save action ("Update Appointment"), read-only lock banner, and internal notes input.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt`
+   - **Why Modified:** Wired `onEdit` in `ScheduleCardActions` to load target appointment into `BookingViewModel` and launch `BookingSheet`.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingViewModelTest.kt`
+   - **Why Modified:** Added test coverage for edit mode pre-population, locked status enforcement, and update appointment workflows.
 
 ---
 

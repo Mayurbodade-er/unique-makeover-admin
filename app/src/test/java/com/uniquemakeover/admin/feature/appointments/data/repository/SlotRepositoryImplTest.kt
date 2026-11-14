@@ -52,6 +52,10 @@ class SlotRepositoryImplTest {
             return clashCount
         }
 
+        override suspend fun countClashingAppointmentsExcludingId(date: String, time: String, excludeId: String): Int {
+            return clashCount
+        }
+
         override suspend fun insert(appointment: AppointmentEntity) = Unit
         override suspend fun insertAll(appointments: List<AppointmentEntity>) = Unit
         override suspend fun update(appointment: AppointmentEntity) = Unit

@@ -11,5 +11,6 @@ data class BookingActions(
     val onSelectStaff: (String) -> Unit = {},
     val onDiscountChange: (Int) -> Unit = {},
     val onAdvanceChange: (Int) -> Unit = {},
+    val onNoteChange: (String) -> Unit = {},
     val onSave: () -> Unit = {}
 )

@@ -13,6 +13,7 @@ import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
 import com.uniquemakeover.admin.feature.appointments.domain.repository.AppointmentRepository
 import com.uniquemakeover.admin.feature.appointments.domain.repository.SlotRepository
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.BookAppointmentUseCase
+import com.uniquemakeover.admin.feature.appointments.domain.usecase.EditAppointmentUseCase
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.GenerateAvailableSlotsUseCase
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.ValidateBookingDraftUseCase
 import com.uniquemakeover.admin.feature.services.domain.usecase.GetServicesUseCase
@@ -51,6 +52,7 @@ class BookingViewModelTest {
     private lateinit var phoneSanitizer: PhoneSanitizer
     private lateinit var validateUseCase: ValidateBookingDraftUseCase
     private lateinit var bookUseCase: BookAppointmentUseCase
+    private lateinit var editUseCase: EditAppointmentUseCase
     private lateinit var generateSlotsUseCase: GenerateAvailableSlotsUseCase
     private lateinit var viewModel: BookingViewModel
 
@@ -70,6 +72,12 @@ class BookingViewModelTest {
             phoneSanitizer,
             fakeTimeProvider
         )
+        editUseCase = EditAppointmentUseCase(
+            fakeAppointmentRepository,
+            fakeSlotRepository,
+            validateUseCase,
+            phoneSanitizer
+        )
         generateSlotsUseCase = GenerateAvailableSlotsUseCase(
             fakeSettingsRepository,
             fakeSlotRepository,
@@ -81,6 +89,7 @@ class BookingViewModelTest {
             getOperationsConfigUseCase = GetOperationsConfigUseCase(fakeSettingsRepository),
             generateAvailableSlotsUseCase = generateSlotsUseCase,
             bookAppointmentUseCase = bookUseCase,
+            editAppointmentUseCase = editUseCase,
             timeProvider = fakeTimeProvider
         )
     }
@@ -141,6 +150,107 @@ class BookingViewModelTest {
         assertEquals(200, fakeAppointmentRepository.insertedAppointments[0].paid)
     }
 
+    @Test
+    fun loadAppointmentForEdit_populatesDraftAndSetsEditMode() = runTest {
+        val existing = Appointment(
+            id = "apt_101",
+            name = "Pooja Patil",
+            phone = "9822001122",
+            serviceSnapshot = "Gold Facial",
+            serviceIds = listOf("s1"),
+            rate = 700,
+            paid = 300,
+            staff = "Sunita",
+            date = "2026-11-20",
+            time = "11:00",
+            note = "Allergic to strong bleach",
+            status = "booked",
+            bookedAt = 1700000000000L
+        )
+        fakeAppointmentRepository.insertedAppointments.add(existing)
+
+        viewModel.loadAppointmentForEdit("apt_101")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isEditMode)
+        assertEquals("apt_101", state.editingAppointmentId)
+        assertFalse(state.isDateTimeLocked)
+        assertEquals("Pooja Patil", state.draft.name)
+        assertEquals("9822001122", state.draft.phone)
+        assertEquals(1, state.draft.selectedServices.size)
+        assertEquals("s1", state.draft.selectedServices[0].id)
+        assertEquals(100, state.draft.discount) // 800 - 700 = 100
+        assertEquals(300, state.draft.advancePaid)
+        assertEquals("Allergic to strong bleach", state.draft.internalNote)
+    }
+
+    @Test
+    fun loadAppointmentForEdit_locksDateTimeForCompletedAppointments() = runTest {
+        val existing = Appointment(
+            id = "apt_102",
+            name = "Rani Deshmukh",
+            phone = "9822003344",
+            serviceSnapshot = "Keratin Spa",
+            serviceIds = listOf("s2"),
+            rate = 1500,
+            paid = 1500,
+            staff = "Sunita",
+            date = "2026-11-20",
+            time = "14:00",
+            note = "",
+            status = "done",
+            bookedAt = 1700000000000L
+        )
+        fakeAppointmentRepository.insertedAppointments.add(existing)
+
+        viewModel.loadAppointmentForEdit("apt_102")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isEditMode)
+        assertTrue(state.isDateTimeLocked)
+    }
+
+    @Test
+    fun saveAppointment_inEditMode_updatesExistingAppointment() = runTest {
+        val existing = Appointment(
+            id = "apt_101",
+            name = "Pooja Patil",
+            phone = "9822001122",
+            serviceSnapshot = "Gold Facial",
+            serviceIds = listOf("s1"),
+            rate = 800,
+            paid = 0,
+            staff = "Sunita",
+            date = "2026-11-20",
+            time = "11:00",
+            note = "",
+            status = "booked",
+            bookedAt = 1700000000000L
+        )
+        fakeAppointmentRepository.insertedAppointments.add(existing)
+
+        viewModel.loadAppointmentForEdit("apt_101")
+        advanceUntilIdle()
+
+        // Modify note and add service2
+        viewModel.updateNote("Updated preference")
+        viewModel.toggleService(service2)
+
+        var saved = false
+        viewModel.saveAppointment { saved = true }
+        advanceUntilIdle()
+
+        assertTrue(saved)
+        assertTrue(viewModel.uiState.value.bookingSuccess)
+        val updated = fakeAppointmentRepository.insertedAppointments.find { it.id == "apt_101" }
+        assertNotNull(updated)
+        assertEquals("Updated preference", updated?.note)
+        assertEquals("Gold Facial + Keratin Spa", updated?.serviceSnapshot)
+        assertEquals(2300, updated?.rate)
+    }
+
     private class FakeServiceRepository(private val services: List<Service>) : ServiceRepository {
         override fun getServices(): Flow<List<Service>> = flowOf(services)
         override suspend fun getServiceById(id: String): Service? = services.find { it.id == id }
@@ -174,8 +284,13 @@ class BookingViewModelTest {
             insertedAppointments.add(appointment)
             return DataResult.Success(Unit)
         }
-        override suspend fun updateAppointment(appointment: Appointment): DataResult<Unit> =
-            DataResult.Success(Unit)
+        override suspend fun updateAppointment(appointment: Appointment): DataResult<Unit> {
+            val index = insertedAppointments.indexOfFirst { it.id == appointment.id }
+            if (index >= 0) {
+                insertedAppointments[index] = appointment
+            }
+            return DataResult.Success(Unit)
+        }
         override suspend fun updateStatus(id: String, status: AppointmentStatus): DataResult<Unit> =
             DataResult.Success(Unit)
         override suspend fun getAppointmentById(id: String): Appointment? = insertedAppointments.find { it.id == id }

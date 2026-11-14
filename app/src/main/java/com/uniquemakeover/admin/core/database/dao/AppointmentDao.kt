@@ -59,6 +59,17 @@ interface AppointmentDao {
     )
     suspend fun countClashingAppointments(date: String, time: String, excludeId: String? = null): Int
 
+    @Query(
+        """
+        SELECT COUNT(*) FROM appointments 
+        WHERE date = :date 
+          AND time = :time 
+          AND LOWER(status) NOT IN ('cancel', 'cancelled') 
+          AND id != :excludeId
+        """
+    )
+    suspend fun countClashingAppointmentsExcludingId(date: String, time: String, excludeId: String): Int
+
     @Query("UPDATE appointments SET status = :status WHERE id = :id")
     suspend fun updateStatus(id: String, status: String): Int
 
