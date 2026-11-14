@@ -37,6 +37,11 @@ class AppointmentRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getTodaySchedule(today: String): Flow<List<Appointment>> {
+        return appointmentDao.observeTodaySchedule(today)
+            .map { entities -> entities.map(AppointmentMapper::toDomain) }
+    }
+
     override fun getFilteredAppointments(
         status: String?,
         startDate: String?,

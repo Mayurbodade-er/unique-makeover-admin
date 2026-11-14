@@ -160,6 +160,7 @@ class BookingViewModelTest {
     private class FakeAppointmentRepository : AppointmentRepository {
         val insertedAppointments = mutableListOf<Appointment>()
         override fun getAllAppointments(): Flow<List<Appointment>> = flowOf(insertedAppointments)
+        override fun getTodaySchedule(today: String): Flow<List<Appointment>> = emptyFlow()
         override fun getAppointmentsByDate(date: String): Flow<List<Appointment>> = emptyFlow()
         override suspend fun getAppointmentsByDateSync(date: String): List<Appointment> = emptyList()
         override fun getFilteredAppointments(

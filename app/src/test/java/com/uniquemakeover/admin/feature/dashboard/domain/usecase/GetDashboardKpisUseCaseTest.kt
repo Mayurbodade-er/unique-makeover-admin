@@ -138,6 +138,7 @@ class GetDashboardKpisUseCaseTest {
         }
 
         override fun getAllAppointments(): Flow<List<Appointment>> = flowOf(todayAppointments)
+        override fun getTodaySchedule(today: String): Flow<List<Appointment>> = flowOf(todayAppointments)
         override fun getAppointmentsByDate(date: String): Flow<List<Appointment>> = flowOf(todayAppointments)
         override suspend fun getAppointmentsByDateSync(date: String): List<Appointment> = todayAppointments
         override fun getFilteredAppointments(

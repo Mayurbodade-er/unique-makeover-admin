@@ -36,6 +36,7 @@ class SlotRepositoryImplTest {
         override fun getAllAppointments(): Flow<List<AppointmentEntity>> = emptyFlow()
         override fun getAppointmentsByDate(date: String): Flow<List<AppointmentEntity>> = emptyFlow()
         override fun observeTodayAppointmentsRaw(today: String): Flow<List<AppointmentEntity>> = emptyFlow()
+        override fun observeTodaySchedule(today: String): Flow<List<AppointmentEntity>> = emptyFlow()
         override suspend fun getAppointmentsByDateSync(date: String): List<AppointmentEntity> = emptyList()
         override fun getAppointmentById(id: String): Flow<AppointmentEntity?> = emptyFlow()
         override suspend fun getAppointmentByIdSync(id: String): AppointmentEntity? = null

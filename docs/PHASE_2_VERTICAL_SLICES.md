@@ -393,19 +393,45 @@ class GetTodayScheduleUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **Navigation Contract Test:** Verifies tapping "Edit" on a schedule card navigates to `Routes.BookingSheet(appointmentId = id)`.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/domain/model/ScheduleItem.kt
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/domain/usecase/GetTodayScheduleUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/components/ScheduleRowCard.kt
-app/src/test/java/com/uniquemakeover/admin/feature/dashboard/domain/usecase/GetTodayScheduleUseCaseTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/dashboard/presentation/ScheduleStreamIntegrationTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt (Adds observeTodaySchedule)
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt (Integrates Schedule stream)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/domain/model/ScheduleItem.kt`
+   - **Architectural Role:** Domain Model (Dashboard)
+   - **Why Created:** Encapsulates the immutable schedule item combining the core `Appointment` entity with a computed `isPastTime: Boolean` flag for chronological timeline presentation without framework dependencies.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/domain/usecase/GetTodayScheduleUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Encapsulates the business logic of retrieving today's appointments ordered chronologically and computing whether each slot has elapsed relative to the current wall-clock time from `TimeProvider`.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/components/ScheduleRowCard.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Renders a luxury appointment card displaying 12-hour formatted time, stylist badge, client phone/name, service snapshot, financial rates/dues, and a bottom quick-action icon button strip (Done, WhatsApp, Pay, Edit, Cancel, Delete).
+4. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/components/ScheduleEmptyBanner.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Displays an aesthetic empty-state card adhering to `desing.md` when no appointments are scheduled for today, prompting the owner to book a new appointment.
+5. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/domain/usecase/GetTodayScheduleUseCaseTest.kt`
+   - **Architectural Role:** JVM Unit Test
+   - **Why Created:** Verifies chronological sorting order (`time ASC, staff ASC`) and past-time evaluation using deterministic `FakeTimeProvider`.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/ScheduleStreamIntegrationTest.kt`
+   - **Architectural Role:** Integration Test (Compose UI)
+   - **Why Created:** Validates chronological stream rendering, empty state banner display, and action callback triggers on the UI layer.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Added `observeTodaySchedule(today: String)` reactive query with composite index sorting on `date`, `time`, and `staff`.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/repository/AppointmentRepository.kt`
+   - **Why Modified:** Declared `getTodaySchedule(today: String): Flow<List<Appointment>>` contract.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/AppointmentRepositoryImpl.kt`
+   - **Why Modified:** Implemented `getTodaySchedule` by mapping database entities to domain models on `@IoDispatcher`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardUiState.kt`
+   - **Why Modified:** Added `schedule: List<ScheduleItem>` state property to deliver live stream items to the UI.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModel.kt`
+   - **Why Modified:** Injected `GetTodayScheduleUseCase` and collected today's live schedule into state flow.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt`
+   - **Why Modified:** Integrated schedule list section, empty banner, and WhatsApp implicit intent launcher via `openWhatsApp`.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModelTest.kt`
+   - **Why Modified:** Updated mock dependencies and added assertions for schedule stream emission.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardKpiIntegrationTest.kt`
+   - **Why Modified:** Integrated `GetTodayScheduleUseCase` in view model instantiation and verified KPI emission.
 
 ---
 

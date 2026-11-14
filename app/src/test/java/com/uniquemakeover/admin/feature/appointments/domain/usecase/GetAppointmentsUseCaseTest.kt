@@ -115,6 +115,7 @@ class GetAppointmentsUseCaseTest {
         var lastQuery: String? = null
 
         override fun getAllAppointments(): Flow<List<Appointment>> = flowOf(emptyList())
+        override fun getTodaySchedule(today: String): Flow<List<Appointment>> = flowOf(emptyList())
         override fun getAppointmentsByDate(date: String): Flow<List<Appointment>> = flowOf(emptyList())
         override suspend fun getAppointmentsByDateSync(date: String): List<Appointment> = emptyList()
 

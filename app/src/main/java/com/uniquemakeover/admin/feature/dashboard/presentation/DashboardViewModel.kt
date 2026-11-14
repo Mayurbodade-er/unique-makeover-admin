@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.uniquemakeover.admin.core.util.TimeProvider
 import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetDashboardKpisUseCase
+import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetTodayScheduleUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val getDashboardKpisUseCase: GetDashboardKpisUseCase,
+    private val getTodayScheduleUseCase: GetTodayScheduleUseCase,
     private val timeProvider: TimeProvider
 ) : ViewModel() {
 
@@ -37,6 +39,12 @@ class DashboardViewModel @Inject constructor(
         getDashboardKpisUseCase()
             .onEach { kpis ->
                 _uiState.update { it.copy(kpis = kpis, isLoading = false) }
+            }
+            .launchIn(viewModelScope)
+
+        getTodayScheduleUseCase()
+            .onEach { schedule ->
+                _uiState.update { it.copy(schedule = schedule, isLoading = false) }
             }
             .launchIn(viewModelScope)
     }

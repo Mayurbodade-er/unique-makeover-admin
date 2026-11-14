@@ -189,6 +189,8 @@ class AppointmentsViewModelTest {
         private val initialList: List<Appointment>
     ) : AppointmentRepository {
         override fun getAllAppointments(): Flow<List<Appointment>> = flowOf(initialList)
+        override fun getTodaySchedule(today: String): Flow<List<Appointment>> =
+            flowOf(initialList.filter { it.date == today })
         override fun getAppointmentsByDate(date: String): Flow<List<Appointment>> = flowOf(initialList)
         override suspend fun getAppointmentsByDateSync(date: String): List<Appointment> = initialList
         override fun getFilteredAppointments(

@@ -4,6 +4,7 @@ import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
 import com.uniquemakeover.admin.feature.appointments.domain.repository.AppointmentRepository
 import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetDashboardKpisUseCase
+import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetTodayScheduleUseCase
 import com.uniquemakeover.admin.testutil.FakeTimeProvider
 import com.uniquemakeover.admin.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,6 +27,7 @@ class DashboardViewModelTest {
     private lateinit var fakeTimeProvider: FakeTimeProvider
     private lateinit var fakeAppointmentRepository: FakeAppointmentRepository
     private lateinit var getDashboardKpisUseCase: GetDashboardKpisUseCase
+    private lateinit var getTodayScheduleUseCase: GetTodayScheduleUseCase
     private lateinit var viewModel: DashboardViewModel
 
     private val sampleAppointment = Appointment(
@@ -48,19 +50,25 @@ class DashboardViewModelTest {
     fun setUp() {
         fakeTimeProvider = FakeTimeProvider()
         fakeTimeProvider.currentDate = "2026-11-20"
+        fakeTimeProvider.currentTime24 = "09:00"
         fakeAppointmentRepository = FakeAppointmentRepository(listOf(sampleAppointment))
         getDashboardKpisUseCase = GetDashboardKpisUseCase(
             appointmentRepository = fakeAppointmentRepository,
             timeProvider = fakeTimeProvider
         )
+        getTodayScheduleUseCase = GetTodayScheduleUseCase(
+            appointmentRepository = fakeAppointmentRepository,
+            timeProvider = fakeTimeProvider
+        )
         viewModel = DashboardViewModel(
             getDashboardKpisUseCase = getDashboardKpisUseCase,
+            getTodayScheduleUseCase = getTodayScheduleUseCase,
             timeProvider = fakeTimeProvider
         )
     }
 
     @Test
-    fun init_loadsKpisForTodayDate() = runTest {
+    fun init_loadsKpisAndScheduleForTodayDate() = runTest {
         advanceUntilIdle()
         val state = viewModel.uiState.value
 
@@ -70,10 +78,13 @@ class DashboardViewModelTest {
         assertEquals(1000, state.kpis.scheduledVolume)
         assertEquals(400, state.kpis.collectedRevenue)
         assertEquals(600, state.kpis.balanceOutstanding)
+        assertEquals(1, state.schedule.size)
+        assertEquals("apt_1", state.schedule[0].appointment.id)
+        assertFalse(state.schedule[0].isPastTime)
     }
 
     @Test
-    fun refresh_reloadsKpis() = runTest {
+    fun refresh_reloadsKpisAndSchedule() = runTest {
         advanceUntilIdle()
         viewModel.refresh()
         advanceUntilIdle()
@@ -81,6 +92,7 @@ class DashboardViewModelTest {
         val state = viewModel.uiState.value
         assertEquals("2026-11-20", state.todayDate)
         assertEquals(1, state.kpis.bookedCount)
+        assertEquals(1, state.schedule.size)
     }
 
     private class FakeAppointmentRepository(
@@ -89,6 +101,7 @@ class DashboardViewModelTest {
         override fun getAllAppointments(): Flow<List<Appointment>> = flowOf(initialList)
         override fun getAppointmentsByDate(date: String): Flow<List<Appointment>> = flowOf(initialList)
         override suspend fun getAppointmentsByDateSync(date: String): List<Appointment> = initialList
+        override fun getTodaySchedule(today: String): Flow<List<Appointment>> = flowOf(initialList)
         override fun getFilteredAppointments(
             status: String?,
             startDate: String?,
