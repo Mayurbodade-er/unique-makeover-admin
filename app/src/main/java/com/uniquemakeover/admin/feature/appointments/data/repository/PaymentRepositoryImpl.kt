@@ -43,4 +43,15 @@ class PaymentRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override suspend fun deletePaymentsByAppointmentId(appointmentId: String): DataResult<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                paymentDao.deletePaymentsByAppointmentId(appointmentId)
+                DataResult.Success(Unit)
+            } catch (e: SQLException) {
+                DataResult.Error(UiText.DynamicString(e.localizedMessage ?: "Failed to delete payments"))
+            }
+        }
+    }
 }

@@ -8,9 +8,7 @@ import com.uniquemakeover.admin.core.domain.model.StatusUpdateResult
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.core.util.TimeProvider
 import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
-import com.uniquemakeover.admin.feature.appointments.domain.usecase.CancelAppointmentUseCase
-import com.uniquemakeover.admin.feature.appointments.domain.usecase.MarkAppointmentDoneUseCase
-import com.uniquemakeover.admin.feature.appointments.domain.usecase.UndoAppointmentStatusUseCase
+import com.uniquemakeover.admin.feature.appointments.domain.usecase.AppointmentOperations
 import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetDashboardKpisUseCase
 import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetTodayScheduleUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,9 +28,7 @@ import javax.inject.Inject
 class DashboardViewModel @Inject constructor(
     private val getDashboardKpisUseCase: GetDashboardKpisUseCase,
     private val getTodayScheduleUseCase: GetTodayScheduleUseCase,
-    private val markAppointmentDoneUseCase: MarkAppointmentDoneUseCase,
-    private val cancelAppointmentUseCase: CancelAppointmentUseCase,
-    private val undoAppointmentStatusUseCase: UndoAppointmentStatusUseCase,
+    private val appointmentOperations: AppointmentOperations,
     private val timeProvider: TimeProvider
 ) : ViewModel() {
 
@@ -53,7 +49,7 @@ class DashboardViewModel @Inject constructor(
     fun markDone(appointment: Appointment) {
         viewModelScope.launch {
             val previousStatus = AppointmentStatus.fromValue(appointment.status)
-            when (val result = markAppointmentDoneUseCase(appointment.id)) {
+            when (val result = appointmentOperations.markDone(appointment.id)) {
                 is DataResult.Success -> {
                     _uiEffect.emit(
                         DashboardUiEffect.ShowUndoSnackbar(
@@ -73,7 +69,7 @@ class DashboardViewModel @Inject constructor(
     fun cancel(appointment: Appointment) {
         viewModelScope.launch {
             val previousStatus = AppointmentStatus.fromValue(appointment.status)
-            when (val result = cancelAppointmentUseCase(appointment.id)) {
+            when (val result = appointmentOperations.cancel(appointment.id)) {
                 is DataResult.Success -> {
                     _uiEffect.emit(
                         DashboardUiEffect.ShowUndoSnackbar(
@@ -92,7 +88,7 @@ class DashboardViewModel @Inject constructor(
 
     fun undoStatus(appointmentId: String, previousStatus: AppointmentStatus) {
         viewModelScope.launch {
-            when (val result = undoAppointmentStatusUseCase(appointmentId, previousStatus)) {
+            when (val result = appointmentOperations.undo(appointmentId, previousStatus)) {
                 is StatusUpdateResult.Success -> {
                     _uiEffect.emit(
                         DashboardUiEffect.ShowMessage(
@@ -103,6 +99,23 @@ class DashboardViewModel @Inject constructor(
                 is StatusUpdateResult.SlotConflict -> _uiEffect.emit(DashboardUiEffect.ShowMessage(result.message))
                 is StatusUpdateResult.InvalidTransition -> _uiEffect.emit(DashboardUiEffect.ShowMessage(result.message))
                 is StatusUpdateResult.NotFound -> _uiEffect.emit(DashboardUiEffect.ShowMessage(result.message))
+            }
+        }
+    }
+
+    fun deleteAppointment(appointment: Appointment) {
+        viewModelScope.launch {
+            when (val result = appointmentOperations.delete(appointment.id)) {
+                is DataResult.Success -> {
+                    _uiEffect.emit(
+                        DashboardUiEffect.ShowMessage(
+                            UiText.DynamicString("Deleted appointment for ${appointment.name}")
+                        )
+                    )
+                }
+                is DataResult.Error -> {
+                    _uiEffect.emit(DashboardUiEffect.ShowMessage(result.message))
+                }
             }
         }
     }

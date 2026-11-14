@@ -137,6 +137,10 @@ class RecordPaymentViewModelTest {
             storedPayments.add(payment)
             return DataResult.Success(Unit)
         }
+        override suspend fun deletePaymentsByAppointmentId(appointmentId: String): DataResult<Unit> {
+            storedPayments.removeAll { it.appointmentId == appointmentId }
+            return DataResult.Success(Unit)
+        }
     }
 
     private class FakeAppointmentRepository(
@@ -159,6 +163,7 @@ class RecordPaymentViewModelTest {
             DataResult.Success(Unit)
         override suspend fun getAppointmentById(id: String): Appointment? = storage[id]
         override suspend fun deleteAppointment(appointment: Appointment): DataResult<Unit> = DataResult.Success(Unit)
+        override suspend fun deleteById(id: String): DataResult<Unit> = DataResult.Success(Unit)
         override suspend fun count(): Int = storage.size
     }
 }

@@ -894,18 +894,51 @@ class DeleteAppointmentUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`ConfirmDialogTest.kt` (Compose UI Test):** Verifies Cancel leaves data intact; Confirm triggers deletion callback.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/ui/components/ConfirmDialog.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/DeleteAppointmentUseCase.kt
-app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/DeleteAppointmentUseCaseTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/appointments/data/AppointmentCascadeDeleteTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt (Adds deleteById)
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/AppointmentRepositoryImpl.kt (Implements deleteById)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/ui/components/ConfirmDialog.kt`
+   - **Architectural Role:** Core Presentation Component (Compose Dialog)
+   - **Why Created:** Provides a reusable, accessible Material 3 confirmation alert dialog (`ConfirmDialogConfig`) with customizable destructive confirm and cancel buttons, adhering to `desing.md` palette (`BrandPrimary`, `SurfaceCard`, `DangerCancel`).
+2. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/DeleteAppointmentUseCase.kt`
+   - **Architectural Role:** Domain Layer UseCase
+   - **Why Created:** Encapsulates business logic for deleting an appointment and cascading deletion of associated payment ledger entries cleanly via `AppointmentRepository` and `PaymentRepository`.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/AppointmentOperations.kt`
+   - **Architectural Role:** Domain Layer Composite Model / State Holder
+   - **Why Created:** Bundles appointment state transitions (`markDone`, `cancel`, `undo`, `delete`) to prevent Detekt `LongParameterList` in ViewModels while keeping domain use cases single-responsibility.
+4. `app/src/test/java/com/uniquemakeover/admin/core/ui/components/ConfirmDialogTest.kt`
+   - **Architectural Role:** JVM Robolectric Unit / Compose UI Test
+   - **Why Created:** Verifies `ConfirmDialog` renders appropriate title, message, and buttons, and tests that Cancel dismisses without action while Confirm triggers the action callback.
+5. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/DeleteAppointmentUseCaseTest.kt`
+   - **Architectural Role:** JVM Unit Test
+   - **Why Created:** Tests `DeleteAppointmentUseCase` error handling and repository delegation during cascade deletion of payments and appointments.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/AppointmentCascadeDeleteTest.kt`
+   - **Architectural Role:** Room In-Memory Integration Test
+   - **Why Created:** Validates cascading deletion inside Room database; asserts both appointment and associated payment records are removed when deleted by ID.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Added `@Query("DELETE FROM appointments WHERE id = :id") suspend fun deleteById(id: String): Int` to support targeted deletion of appointment records by ID.
+2. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/PaymentDao.kt`
+   - **Why Modified:** Added `@Query("DELETE FROM payments WHERE appointmentId = :appointmentId") suspend fun deletePaymentsByAppointmentId(appointmentId: String): Int` to support cascading deletion of payment records for a given appointment.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/repository/AppointmentRepository.kt`
+   - **Why Modified:** Added `suspend fun deleteById(id: String): DataResult<Unit>` to repository contract.
+4. `app/src/main/java/com/uniquemakeover/admin/core/domain/repository/PaymentRepository.kt`
+   - **Why Modified:** Added `suspend fun deletePaymentsByAppointmentId(appointmentId: String): DataResult<Unit>` to repository contract.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/AppointmentRepositoryImpl.kt`
+   - **Why Modified:** Implemented `deleteById(id)` invoking `AppointmentDao.deleteById` within `@IoDispatcher` context.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/PaymentRepositoryImpl.kt`
+   - **Why Modified:** Implemented `deletePaymentsByAppointmentId(appointmentId)` invoking `PaymentDao.deletePaymentsByAppointmentId` within `@IoDispatcher` context.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModel.kt`
+   - **Why Modified:** Replaced individual use cases with `AppointmentOperations` and added `deleteAppointment(appointment: Appointment)` handling deletion result and feedback emission.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt`
+   - **Why Modified:** Wired `onDelete` action, added `DashboardDeleteModal` with historical payment warning (`target.paid > 0`), and factored `buildScheduleActions` for Detekt compliance.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModelTest.kt`
+   - **Why Modified:** Added test case for `deleteAppointment` and updated fake repositories and ViewModel instantiation.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardKpiIntegrationTest.kt`
+    - **Why Modified:** Updated ViewModel construction to supply `AppointmentOperations` bundling all lifecycle use cases.
+11. `app/src/test/java/com/.../FakeAppointmentDao / FakeRepository implementations`
+    - **Why Modified:** Updated all test fakes across appointment and dashboard test suites to implement `deleteById` and `deletePaymentsByAppointmentId`.
 
 ---
 

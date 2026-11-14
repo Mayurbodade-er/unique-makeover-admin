@@ -111,5 +111,16 @@ class AppointmentRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun deleteById(id: String): DataResult<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                appointmentDao.deleteById(id)
+                DataResult.Success(Unit)
+            } catch (e: SQLException) {
+                DataResult.Error(UiText.DynamicString(e.localizedMessage ?: "Failed to delete appointment"))
+            }
+        }
+    }
+
     override suspend fun count(): Int = withContext(ioDispatcher) { appointmentDao.count() }
 }

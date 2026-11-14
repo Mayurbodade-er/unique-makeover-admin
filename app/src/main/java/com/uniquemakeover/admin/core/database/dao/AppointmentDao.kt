@@ -88,6 +88,9 @@ interface AppointmentDao {
     @Delete
     suspend fun delete(appointment: AppointmentEntity)
 
+    @Query("DELETE FROM appointments WHERE id = :id")
+    suspend fun deleteById(id: String): Int
+
     @Query("SELECT COUNT(*) FROM appointments")
     suspend fun count(): Int
 }

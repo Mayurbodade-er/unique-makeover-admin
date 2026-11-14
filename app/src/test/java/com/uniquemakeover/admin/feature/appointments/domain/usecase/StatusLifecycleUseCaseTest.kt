@@ -163,6 +163,11 @@ class StatusLifecycleUseCaseTest {
             return DataResult.Success(Unit)
         }
 
+        override suspend fun deleteById(id: String): DataResult<Unit> {
+            storage.remove(id)
+            return DataResult.Success(Unit)
+        }
+
         override suspend fun count(): Int = storage.size
     }
 

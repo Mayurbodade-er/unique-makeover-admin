@@ -75,6 +75,16 @@ class AppointmentRepositoryImplTest {
         assertEquals("apt_02", fakeDao.storedEntities[0].id)
     }
 
+    @Test
+    fun deleteById_removesEntityFromDao() = runTest(testDispatcher) {
+        val fakeDao = FakeAppointmentDao(listOf(sampleEntity))
+        val repository = AppointmentRepositoryImpl(fakeDao, testDispatcher)
+
+        val result = repository.deleteById("apt_01")
+        assertTrue(result is DataResult.Success<*>)
+        assertEquals(0, fakeDao.storedEntities.size)
+    }
+
     private class FakeAppointmentDao(initialList: List<AppointmentEntity>) : AppointmentDao {
         val storedEntities = initialList.toMutableList()
 
@@ -162,6 +172,11 @@ class AppointmentRepositoryImplTest {
 
         override suspend fun delete(appointment: AppointmentEntity) {
             storedEntities.removeAll { it.id == appointment.id }
+        }
+
+        override suspend fun deleteById(id: String): Int {
+            val removed = storedEntities.removeAll { it.id == id }
+            return if (removed) 1 else 0
         }
 
         override suspend fun count(): Int = storedEntities.size

@@ -117,6 +117,7 @@ class GetTodayScheduleUseCaseTest {
             DataResult.Success(Unit)
         override suspend fun getAppointmentById(id: String): Appointment? = schedule.find { it.id == id }
         override suspend fun deleteAppointment(appointment: Appointment): DataResult<Unit> = DataResult.Success(Unit)
+        override suspend fun deleteById(id: String): DataResult<Unit> = DataResult.Success(Unit)
         override suspend fun count(): Int = schedule.size
     }
 }

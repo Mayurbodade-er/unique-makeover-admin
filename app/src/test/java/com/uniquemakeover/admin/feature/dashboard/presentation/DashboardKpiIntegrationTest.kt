@@ -15,8 +15,11 @@ import com.uniquemakeover.admin.core.database.dao.AppointmentDao
 import com.uniquemakeover.admin.core.database.entity.AppointmentEntity
 import com.uniquemakeover.admin.core.ui.theme.UniqueMakeoverTheme
 import com.uniquemakeover.admin.feature.appointments.data.repository.AppointmentRepositoryImpl
+import com.uniquemakeover.admin.feature.appointments.data.repository.PaymentRepositoryImpl
 import com.uniquemakeover.admin.feature.appointments.data.repository.SlotRepositoryImpl
+import com.uniquemakeover.admin.feature.appointments.domain.usecase.AppointmentOperations
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.CancelAppointmentUseCase
+import com.uniquemakeover.admin.feature.appointments.domain.usecase.DeleteAppointmentUseCase
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.MarkAppointmentDoneUseCase
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.UndoAppointmentStatusUseCase
 import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetDashboardKpisUseCase
@@ -61,18 +64,28 @@ class DashboardKpiIntegrationTest {
 
         val repository = AppointmentRepositoryImpl(appointmentDao, Dispatchers.Unconfined)
         val slotRepository = SlotRepositoryImpl(appointmentDao, Dispatchers.Unconfined)
+        val paymentRepository = PaymentRepositoryImpl(
+            database.paymentDao(),
+            appointmentDao,
+            Dispatchers.Unconfined
+        )
         getDashboardKpisUseCase = GetDashboardKpisUseCase(repository, fakeTimeProvider)
         val getTodayScheduleUseCase = GetTodayScheduleUseCase(repository, fakeTimeProvider)
         val markDoneUseCase = MarkAppointmentDoneUseCase(repository)
         val cancelUseCase = CancelAppointmentUseCase(repository)
         val undoUseCase = UndoAppointmentStatusUseCase(repository, slotRepository)
+        val deleteUseCase = DeleteAppointmentUseCase(repository, paymentRepository)
+        val appointmentOperations = AppointmentOperations(
+            markDone = markDoneUseCase,
+            cancel = cancelUseCase,
+            undo = undoUseCase,
+            delete = deleteUseCase
+        )
 
         viewModel = DashboardViewModel(
             getDashboardKpisUseCase = getDashboardKpisUseCase,
             getTodayScheduleUseCase = getTodayScheduleUseCase,
-            markAppointmentDoneUseCase = markDoneUseCase,
-            cancelAppointmentUseCase = cancelUseCase,
-            undoAppointmentStatusUseCase = undoUseCase,
+            appointmentOperations = appointmentOperations,
             timeProvider = fakeTimeProvider
         )
     }

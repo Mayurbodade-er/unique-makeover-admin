@@ -43,6 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.uniquemakeover.admin.core.ui.components.ConfirmDialog
+import com.uniquemakeover.admin.core.ui.components.ConfirmDialogConfig
 import com.uniquemakeover.admin.core.ui.theme.BrandPrimary
 import com.uniquemakeover.admin.core.ui.theme.LuxuryGold
 import com.uniquemakeover.admin.core.ui.theme.TextMuted
@@ -75,25 +77,22 @@ fun DashboardRoute(
     val snackbarHostState = remember { SnackbarHostState() }
     var isBookingOpen by remember { mutableStateOf(false) }
     var paymentTarget by remember { mutableStateOf<Appointment?>(null) }
+    var deleteTarget by remember { mutableStateOf<Appointment?>(null) }
 
     val actions = remember(context, viewModel, bookingViewModel) {
-        ScheduleCardActions(
-            onMarkDone = { viewModel.markDone(it) },
-            onCancel = { viewModel.cancel(it) },
-            onRecordPayment = { paymentTarget = it },
-            onEdit = { appointment ->
-                bookingViewModel.loadAppointmentForEdit(appointment.id)
+        buildScheduleActions(
+            context = context,
+            viewModel = viewModel,
+            onPayment = { paymentTarget = it },
+            onEdit = {
+                bookingViewModel.loadAppointmentForEdit(it.id)
                 isBookingOpen = true
             },
-            onWhatsApp = { openWhatsApp(context, it.phone) }
+            onDelete = { deleteTarget = it }
         )
     }
 
-    DashboardSnackbarEffect(
-        viewModel = viewModel,
-        snackbarHostState = snackbarHostState,
-        context = context
-    )
+    DashboardSnackbarEffect(viewModel, snackbarHostState, context)
 
     DashboardScreen(
         uiState = uiState,
@@ -106,24 +105,58 @@ fun DashboardRoute(
         modifier = modifier
     )
 
-    DashboardBookingModal(
-        isOpen = isBookingOpen,
-        uiState = bookingUiState,
-        viewModel = bookingViewModel,
-        onDismiss = {
-            isBookingOpen = false
-            viewModel.refresh()
-        }
-    )
+    DashboardBookingModal(isBookingOpen, bookingUiState, bookingViewModel) {
+        isBookingOpen = false
+        viewModel.refresh()
+    }
+    DashboardPaymentModal(paymentTarget, paymentUiState, paymentViewModel) {
+        paymentTarget = null
+        viewModel.refresh()
+    }
+    DashboardDeleteModal(deleteTarget, onDismiss = { deleteTarget = null }) {
+        viewModel.deleteAppointment(it)
+        deleteTarget = null
+    }
+}
 
-    DashboardPaymentModal(
-        target = paymentTarget,
-        uiState = paymentUiState,
-        viewModel = paymentViewModel,
-        onDismiss = {
-            paymentTarget = null
-            viewModel.refresh()
-        }
+private fun buildScheduleActions(
+    context: Context,
+    viewModel: DashboardViewModel,
+    onPayment: (Appointment) -> Unit,
+    onEdit: (Appointment) -> Unit,
+    onDelete: (Appointment) -> Unit
+): ScheduleCardActions = ScheduleCardActions(
+    onMarkDone = { viewModel.markDone(it) },
+    onCancel = { viewModel.cancel(it) },
+    onRecordPayment = onPayment,
+    onEdit = onEdit,
+    onDelete = onDelete,
+    onWhatsApp = { openWhatsApp(context, it.phone) }
+)
+
+@Composable
+private fun DashboardDeleteModal(
+    target: Appointment?,
+    onDismiss: () -> Unit,
+    onConfirm: (Appointment) -> Unit
+) {
+    if (target == null) return
+
+    val message = if (target.paid > 0) {
+        "This appointment has recorded payments totaling ₹${target.paid}. " +
+            "Deleting will adjust historical revenue metrics. Proceed?"
+    } else {
+        "This will permanently delete the appointment for ${target.name} on ${target.date}. " +
+            "This action cannot be undone."
+    }
+
+    ConfirmDialog(
+        config = ConfirmDialogConfig(
+            title = "Delete Appointment?",
+            message = message
+        ),
+        onConfirm = { onConfirm(target) },
+        onDismiss = onDismiss
     )
 }
 

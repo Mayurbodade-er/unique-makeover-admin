@@ -28,4 +28,7 @@ interface PaymentDao {
 
     @Delete
     suspend fun delete(payment: PaymentEntity)
+
+    @Query("DELETE FROM payments WHERE appointmentId = :appointmentId")
+    suspend fun deletePaymentsByAppointmentId(appointmentId: String): Int
 }

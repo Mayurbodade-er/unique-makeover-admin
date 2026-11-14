@@ -8,4 +8,5 @@ interface PaymentRepository {
     fun getPaymentsForAppointment(appointmentId: String): Flow<List<Payment>>
     suspend fun getPaymentsForAppointmentSync(appointmentId: String): List<Payment>
     suspend fun recordPayment(payment: Payment): DataResult<Unit>
+    suspend fun deletePaymentsByAppointmentId(appointmentId: String): DataResult<Unit>
 }

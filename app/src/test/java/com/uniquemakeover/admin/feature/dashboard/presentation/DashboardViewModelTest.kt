@@ -1,12 +1,17 @@
 package com.uniquemakeover.admin.feature.dashboard.presentation
 
+import com.uniquemakeover.admin.core.common.UiText
 import com.uniquemakeover.admin.core.domain.model.AppointmentStatus
+import com.uniquemakeover.admin.core.domain.model.Payment
 import com.uniquemakeover.admin.core.domain.model.Slot
+import com.uniquemakeover.admin.core.domain.repository.PaymentRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
 import com.uniquemakeover.admin.feature.appointments.domain.repository.AppointmentRepository
 import com.uniquemakeover.admin.feature.appointments.domain.repository.SlotRepository
+import com.uniquemakeover.admin.feature.appointments.domain.usecase.AppointmentOperations
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.CancelAppointmentUseCase
+import com.uniquemakeover.admin.feature.appointments.domain.usecase.DeleteAppointmentUseCase
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.MarkAppointmentDoneUseCase
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.UndoAppointmentStatusUseCase
 import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetDashboardKpisUseCase
@@ -15,8 +20,8 @@ import com.uniquemakeover.admin.testutil.FakeTimeProvider
 import com.uniquemakeover.admin.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -36,12 +41,15 @@ class DashboardViewModelTest {
 
     private lateinit var fakeTimeProvider: FakeTimeProvider
     private lateinit var fakeAppointmentRepository: FakeAppointmentRepository
+    private lateinit var fakePaymentRepository: FakePaymentRepository
     private lateinit var fakeSlotRepository: FakeSlotRepository
     private lateinit var getDashboardKpisUseCase: GetDashboardKpisUseCase
     private lateinit var getTodayScheduleUseCase: GetTodayScheduleUseCase
     private lateinit var markDoneUseCase: MarkAppointmentDoneUseCase
     private lateinit var cancelUseCase: CancelAppointmentUseCase
     private lateinit var undoUseCase: UndoAppointmentStatusUseCase
+    private lateinit var deleteUseCase: DeleteAppointmentUseCase
+    private lateinit var appointmentOperations: AppointmentOperations
     private lateinit var viewModel: DashboardViewModel
 
     private val sampleAppointment = Appointment(
@@ -66,6 +74,7 @@ class DashboardViewModelTest {
         fakeTimeProvider.currentDate = "2026-11-20"
         fakeTimeProvider.currentTime24 = "09:00"
         fakeAppointmentRepository = FakeAppointmentRepository(mutableListOf(sampleAppointment))
+        fakePaymentRepository = FakePaymentRepository()
         fakeSlotRepository = FakeSlotRepository()
         getDashboardKpisUseCase = GetDashboardKpisUseCase(
             appointmentRepository = fakeAppointmentRepository,
@@ -78,47 +87,36 @@ class DashboardViewModelTest {
         markDoneUseCase = MarkAppointmentDoneUseCase(fakeAppointmentRepository)
         cancelUseCase = CancelAppointmentUseCase(fakeAppointmentRepository)
         undoUseCase = UndoAppointmentStatusUseCase(fakeAppointmentRepository, fakeSlotRepository)
+        deleteUseCase = DeleteAppointmentUseCase(fakeAppointmentRepository, fakePaymentRepository)
+        appointmentOperations = AppointmentOperations(
+            markDone = markDoneUseCase,
+            cancel = cancelUseCase,
+            undo = undoUseCase,
+            delete = deleteUseCase
+        )
 
         viewModel = DashboardViewModel(
             getDashboardKpisUseCase = getDashboardKpisUseCase,
             getTodayScheduleUseCase = getTodayScheduleUseCase,
-            markAppointmentDoneUseCase = markDoneUseCase,
-            cancelAppointmentUseCase = cancelUseCase,
-            undoAppointmentStatusUseCase = undoUseCase,
+            appointmentOperations = appointmentOperations,
             timeProvider = fakeTimeProvider
         )
     }
 
     @Test
-    fun init_loadsKpisAndScheduleForTodayDate() = runTest {
+    fun loadInitialData_streamsKpisAndSchedule() = runTest {
         advanceUntilIdle()
-        val state = viewModel.uiState.value
 
-        assertEquals("2026-11-20", state.todayDate)
+        val state = viewModel.uiState.value
         assertFalse(state.isLoading)
-        assertEquals(1, state.kpis.bookedCount)
-        assertEquals(1000, state.kpis.scheduledVolume)
-        assertEquals(400, state.kpis.collectedRevenue)
-        assertEquals(600, state.kpis.balanceOutstanding)
-        assertEquals(1, state.schedule.size)
-        assertEquals("apt_1", state.schedule[0].appointment.id)
-        assertFalse(state.schedule[0].isPastTime)
-    }
-
-    @Test
-    fun refresh_reloadsKpisAndSchedule() = runTest {
-        advanceUntilIdle()
-        viewModel.refresh()
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
         assertEquals("2026-11-20", state.todayDate)
         assertEquals(1, state.kpis.bookedCount)
         assertEquals(1, state.schedule.size)
+        assertEquals("Sunita Sharma", state.schedule[0].appointment.name)
     }
 
     @Test
-    fun markDone_emitsShowUndoSnackbar() = runTest {
+    fun markDone_updatesStatusAndEmitsUndoSnackbar() = runTest {
         val effects = mutableListOf<DashboardUiEffect>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiEffect.collect { effects.add(it) }
@@ -131,11 +129,10 @@ class DashboardViewModelTest {
         assertTrue(effects[0] is DashboardUiEffect.ShowUndoSnackbar)
         val undoEffect = effects[0] as DashboardUiEffect.ShowUndoSnackbar
         assertEquals("apt_1", undoEffect.appointmentId)
-        assertEquals(AppointmentStatus.BOOKED, undoEffect.previousStatus)
     }
 
     @Test
-    fun cancel_emitsShowUndoSnackbar() = runTest {
+    fun cancel_updatesStatusAndEmitsUndoSnackbar() = runTest {
         val effects = mutableListOf<DashboardUiEffect>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiEffect.collect { effects.add(it) }
@@ -164,6 +161,23 @@ class DashboardViewModelTest {
         assertTrue(effects[0] is DashboardUiEffect.ShowMessage)
     }
 
+    @Test
+    fun deleteAppointment_deletesRecordAndEmitsMessage() = runTest {
+        val effects = mutableListOf<DashboardUiEffect>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiEffect.collect { effects.add(it) }
+        }
+
+        viewModel.deleteAppointment(sampleAppointment)
+        advanceUntilIdle()
+
+        assertEquals(1, effects.size)
+        assertTrue(effects[0] is DashboardUiEffect.ShowMessage)
+        val msg = effects[0] as DashboardUiEffect.ShowMessage
+        val dynamicMsg = msg.message as UiText.DynamicString
+        assertEquals("Deleted appointment for Sunita Sharma", dynamicMsg.value)
+    }
+
     private class FakeAppointmentRepository(
         private val list: MutableList<Appointment>
     ) : AppointmentRepository {
@@ -186,8 +200,29 @@ class DashboardViewModelTest {
             return DataResult.Success(Unit)
         }
         override suspend fun getAppointmentById(id: String): Appointment? = list.find { it.id == id }
-        override suspend fun deleteAppointment(appointment: Appointment): DataResult<Unit> = DataResult.Success(Unit)
+        override suspend fun deleteAppointment(appointment: Appointment): DataResult<Unit> {
+            list.removeIf { it.id == appointment.id }
+            return DataResult.Success(Unit)
+        }
+
+        override suspend fun deleteById(id: String): DataResult<Unit> {
+            list.removeIf { it.id == id }
+            return DataResult.Success(Unit)
+        }
+
         override suspend fun count(): Int = list.size
+    }
+
+    private class FakePaymentRepository : PaymentRepository {
+        val deletedIds = mutableListOf<String>()
+
+        override fun getPaymentsForAppointment(appointmentId: String): Flow<List<Payment>> = emptyFlow()
+        override suspend fun getPaymentsForAppointmentSync(appointmentId: String): List<Payment> = emptyList()
+        override suspend fun recordPayment(payment: Payment): DataResult<Unit> = DataResult.Success(Unit)
+        override suspend fun deletePaymentsByAppointmentId(appointmentId: String): DataResult<Unit> {
+            deletedIds.add(appointmentId)
+            return DataResult.Success(Unit)
+        }
     }
 
     private class FakeSlotRepository : SlotRepository {

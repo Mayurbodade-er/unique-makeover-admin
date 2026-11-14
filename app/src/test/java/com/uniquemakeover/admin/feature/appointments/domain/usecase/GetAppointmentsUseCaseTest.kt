@@ -139,6 +139,7 @@ class GetAppointmentsUseCaseTest {
             DataResult.Success(Unit)
         override suspend fun getAppointmentById(id: String): Appointment? = null
         override suspend fun deleteAppointment(appointment: Appointment): DataResult<Unit> = DataResult.Success(Unit)
+        override suspend fun deleteById(id: String): DataResult<Unit> = DataResult.Success(Unit)
         override suspend fun count(): Int = 0
     }
 }

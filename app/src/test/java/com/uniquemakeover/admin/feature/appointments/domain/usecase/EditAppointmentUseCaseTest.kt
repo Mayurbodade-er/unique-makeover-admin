@@ -233,6 +233,11 @@ class EditAppointmentUseCaseTest {
             return DataResult.Success(Unit)
         }
 
+        override suspend fun deleteById(id: String): DataResult<Unit> {
+            appointments.remove(id)
+            return DataResult.Success(Unit)
+        }
+
         override suspend fun count(): Int = appointments.size
     }
 
