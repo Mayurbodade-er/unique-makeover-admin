@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Camera for service reference photos & logo acquisition (FRD §6.2, §15) -->
-    <!-- STRICT INVARIANT: ZERO android.permission.INTERNET -->
+    <!-- STRICT INVARIANT: ZERO network permissions -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.CAMERA" />
 

@@ -44,6 +44,7 @@ class AppointmentsScreenTest {
 
         composeTestRule.onNodeWithText("Appointments").assertIsDisplayed()
         composeTestRule.onNodeWithText("Available Appointment Slots").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Book Appointment", useUnmergedTree = true).assertExists()
         composeTestRule.onNodeWithText("10:00 AM").assertIsDisplayed()
         composeTestRule.onNodeWithText("10:00 AM").performClick()
 
