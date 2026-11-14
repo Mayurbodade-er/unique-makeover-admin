@@ -68,6 +68,9 @@ class SlotRepositoryImplTest {
         override fun observeClientProfiles(): Flow<List<ClientProfileAggregate>> =
             emptyFlow()
 
+        override fun searchClientProfiles(query: String): Flow<List<ClientProfileAggregate>> =
+            emptyFlow()
+
         override suspend fun count(): Int = 0
     }
 }

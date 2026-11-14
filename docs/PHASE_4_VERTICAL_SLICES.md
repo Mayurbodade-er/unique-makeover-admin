@@ -296,16 +296,36 @@ class SearchClientProfilesUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`ClientsSearchFlowTest.kt`:** Verifies `150ms` debounce properly squashes intermediate keystrokes.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/usecase/SearchClientProfilesUseCase.kt
-app/src/test/java/com/uniquemakeover/admin/feature/clients/domain/usecase/SearchClientProfilesUseCaseTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsViewModel.kt (Integrates search debounced flow)
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt (Adds searchClientProfiles query)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/usecase/SearchClientProfilesUseCase.kt`
+   - **Architectural Role:** Pure Kotlin Domain UseCase
+   - **Why Created:** Encapsulates business logic for client directory search, safely trimming leading/trailing whitespace (`EC-CRM-02.3`) and delegating empty queries to full directory retrieval.
+2. `app/src/test/java/com/uniquemakeover/admin/feature/clients/domain/usecase/SearchClientProfilesUseCaseTest.kt`
+   - **Architectural Role:** Domain Unit Test
+   - **Why Created:** Verifies query whitespace trimming, blank query fallbacks, and parameter delegation to `ClientProfileRepository`.
+3. `app/src/test/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsSearchFlowTest.kt`
+   - **Architectural Role:** Presentation Flow & Timing Test
+   - **Why Created:** Verifies that rapid intermediate keystroke emissions within 50ms are squashed by 150ms debounce (`EC-CRM-02.1`), dispatching only the final query string.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Added `searchClientProfiles(query: String)` query with `LIKE` pattern matching on `name` and `phone` over indexed columns in $< 30$ ms.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/clients/data/repository/ClientProfileRepositoryImpl.kt`
+   - **Why Modified:** Implemented `searchClientProfiles` delegating to Room `AppointmentDao.searchClientProfiles()` with canonical `PhoneSanitizer` deduplication.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsViewModel.kt`
+   - **Why Modified:** Implemented 150ms typing debounce (`debounce { if (query.isEmpty()) 0L else 150L }`), zero-delay immediate clear (`clearSearch()`), and `flatMapLatest` cancellation of in-flight queries.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsScreen.kt`
+   - **Why Modified:** Added dynamic match count badge (`X matches`), leading search icon, clear trailing icon button `(X)`, and empty state illustration for zero-result queries with a reset button.
+5. `app/src/test/java/com/uniquemakeover/admin/feature/clients/data/ClientProfileRepositoryImplTest.kt`
+   - **Why Modified:** Added integration tests verifying `searchClientProfiles` on in-memory Room database for partial name (AC-CRM-02.1), phone substring (AC-CRM-02.2), Unicode Devanagari text (EC-CRM-02.2), and whitespace padding (EC-CRM-02.3).
+6. `app/src/test/java/com/uniquemakeover/admin/feature/clients/presentation/list/ClientsViewModelTest.kt`
+   - **Why Modified:** Updated tests to inject `SearchClientProfilesUseCase`, asserting 150ms debounce, immediate clear, and phone substring filtering.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/repository/AppointmentRepositoryImplTest.kt`
+   - **Why Modified:** Implemented `searchClientProfiles()` on `FakeAppointmentDao`.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/repository/SlotRepositoryImplTest.kt`
+   - **Why Modified:** Implemented `searchClientProfiles()` on `FakeAppointmentDao`.
 
 ---
 

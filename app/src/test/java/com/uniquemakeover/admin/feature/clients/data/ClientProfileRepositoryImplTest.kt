@@ -145,6 +145,70 @@ class ClientProfileRepositoryImplTest {
         assertEquals(0, profile.totalSpend)
     }
 
+    @Test
+    fun acCrm02_1_searchByPartialName_returnsMatchingProfile() = runTest(testDispatcher) {
+        val apt1 = createAppointment(
+            TestApt("apt_s1", "Radhika Apte", "9822123456", 2000, "done", "2026-11-10", 1000L)
+        )
+        val apt2 = createAppointment(
+            TestApt("apt_s2", "Anjali Sharma", "9876543210", 800, "done", "2026-11-11", 2000L)
+        )
+        appointmentDao.insertAll(listOf(apt1, apt2))
+
+        val results = repository.searchClientProfiles("radh").first()
+
+        assertEquals(1, results.size)
+        assertEquals("Radhika Apte", results[0].name)
+    }
+
+    @Test
+    fun acCrm02_2_searchByPartialPhoneSubstring_returnsMatchingProfile() = runTest(testDispatcher) {
+        val apt1 = createAppointment(
+            TestApt("apt_p1", "Sneha", "9822123456", 1500, "done", "2026-11-01", 1000L)
+        )
+        val apt2 = createAppointment(
+            TestApt("apt_p2", "Meera", "9876500000", 500, "done", "2026-11-02", 2000L)
+        )
+        appointmentDao.insertAll(listOf(apt1, apt2))
+
+        val results1 = repository.searchClientProfiles("1234").first()
+        val results2 = repository.searchClientProfiles("3456").first()
+
+        assertEquals(1, results1.size)
+        assertEquals("Sneha", results1[0].name)
+        assertEquals(1, results2.size)
+        assertEquals("Sneha", results2[0].name)
+    }
+
+    @Test
+    fun ecCrm02_2_searchWithRegionalMarathiDevanagari_matchesSafely() = runTest(testDispatcher) {
+        val apt1 = createAppointment(
+            TestApt("apt_u1", "पूजा पाटील", "9822998877", 1200, "done", "2026-11-05", 1000L)
+        )
+        val apt2 = createAppointment(
+            TestApt("apt_u2", "Rani", "9822112233", 800, "done", "2026-11-06", 2000L)
+        )
+        appointmentDao.insertAll(listOf(apt1, apt2))
+
+        val results = repository.searchClientProfiles("पूजा").first()
+
+        assertEquals(1, results.size)
+        assertEquals("पूजा पाटील", results[0].name)
+    }
+
+    @Test
+    fun ecCrm02_3_searchWithWhitespacePadding_trimsAndMatches() = runTest(testDispatcher) {
+        val apt = createAppointment(
+            TestApt("apt_w1", "Kavita", "9822123456", 900, "done", "2026-11-08", 1000L)
+        )
+        appointmentDao.insertAll(listOf(apt))
+
+        val results = repository.searchClientProfiles("  9822123456  ").first()
+
+        assertEquals(1, results.size)
+        assertEquals("Kavita", results[0].name)
+    }
+
     private data class TestApt(
         val id: String,
         val name: String,

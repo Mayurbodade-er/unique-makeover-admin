@@ -23,35 +23,34 @@ class ClientProfileRepositoryImpl @Inject constructor(
 
     override fun getClientProfiles(): Flow<List<ClientProfile>> {
         return appointmentDao.observeClientProfiles()
-            .map { aggregates ->
-                aggregates
-                    .groupBy { aggregate ->
-                        phoneSanitizer.sanitize(aggregate.phone) ?: aggregate.phone
-                    }
-                    .map { (canonicalPhone, group) ->
-                        if (group.size == 1) {
-                            ClientProfileMapper.toDomain(group.first(), canonicalPhone)
-                        } else {
-                            mergeAggregates(canonicalPhone, group)
-                        }
-                    }
-            }
+            .map { aggregates -> mapAggregatesToProfiles(aggregates) }
             .flowOn(ioDispatcher)
     }
 
     override fun searchClientProfiles(query: String): Flow<List<ClientProfile>> {
         val trimmed = query.trim()
-        val cleanPhoneQuery = phoneSanitizer.sanitize(trimmed) ?: trimmed
-        return getClientProfiles().map { profiles ->
-            if (trimmed.isEmpty()) {
-                profiles
-            } else {
-                profiles.filter { profile ->
-                    profile.name.contains(trimmed, ignoreCase = true) ||
-                        profile.phone.contains(cleanPhoneQuery)
+        if (trimmed.isEmpty()) {
+            return getClientProfiles()
+        }
+        return appointmentDao.searchClientProfiles(trimmed)
+            .map { aggregates -> mapAggregatesToProfiles(aggregates) }
+            .flowOn(ioDispatcher)
+    }
+
+    private fun mapAggregatesToProfiles(
+        aggregates: List<ClientProfileAggregate>
+    ): List<ClientProfile> {
+        return aggregates
+            .groupBy { aggregate ->
+                phoneSanitizer.sanitize(aggregate.phone) ?: aggregate.phone
+            }
+            .map { (canonicalPhone, group) ->
+                if (group.size == 1) {
+                    ClientProfileMapper.toDomain(group.first(), canonicalPhone)
+                } else {
+                    mergeAggregates(canonicalPhone, group)
                 }
             }
-        }.flowOn(ioDispatcher)
     }
 
     private fun mergeAggregates(

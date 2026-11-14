@@ -19,10 +19,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -54,6 +56,7 @@ fun ClientsRoute(
     ClientsScreen(
         uiState = uiState,
         onSearchQueryChange = viewModel::onSearchQueryChange,
+        onClearSearch = viewModel::clearSearch,
         onClientClick = onClientClick,
         modifier = modifier
     )
@@ -63,6 +66,7 @@ fun ClientsRoute(
 fun ClientsScreen(
     uiState: ClientsUiState,
     onSearchQueryChange: (String) -> Unit,
+    onClearSearch: () -> Unit,
     onClientClick: (phone: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -72,26 +76,35 @@ fun ClientsScreen(
             .background(WarmBackground)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        ClientsHeader(totalClients = uiState.clients.size)
+        ClientsHeader(
+            totalClients = uiState.clients.size,
+            isSearching = uiState.searchQuery.isNotBlank()
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         ClientsSearchBar(
             query = uiState.searchQuery,
-            onQueryChange = onSearchQueryChange
+            onQueryChange = onSearchQueryChange,
+            onClear = onClearSearch
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         ClientsContent(
             uiState = uiState,
+            onClearSearch = onClearSearch,
             onClientClick = onClientClick
         )
     }
 }
 
 @Composable
-private fun ClientsHeader(totalClients: Int, modifier: Modifier = Modifier) {
+private fun ClientsHeader(
+    totalClients: Int,
+    isSearching: Boolean,
+    modifier: Modifier = Modifier
+) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -116,8 +129,9 @@ private fun ClientsHeader(totalClients: Int, modifier: Modifier = Modifier) {
                 .background(BlushSurface)
                 .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
+            val label = if (isSearching) "$totalClients matches" else "$totalClients Clients"
             Text(
-                text = "$totalClients Clients",
+                text = label,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = BrandPrimary
@@ -130,6 +144,7 @@ private fun ClientsHeader(totalClients: Int, modifier: Modifier = Modifier) {
 private fun ClientsSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
+    onClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     OutlinedTextField(
@@ -142,13 +157,13 @@ private fun ClientsSearchBar(
         },
         trailingIcon = {
             if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
+                IconButton(onClick = onClear) {
                     Icon(Icons.Outlined.Close, contentDescription = "Clear search", tint = TextMuted)
                 }
             }
         },
         singleLine = true,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = SurfaceCard,
             unfocusedContainerColor = SurfaceCard,
@@ -161,6 +176,7 @@ private fun ClientsSearchBar(
 @Composable
 private fun ClientsContent(
     uiState: ClientsUiState,
+    onClearSearch: () -> Unit,
     onClientClick: (phone: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -171,7 +187,10 @@ private fun ClientsContent(
             }
         }
         uiState.clients.isEmpty() -> {
-            EmptyClientsView(hasFilter = uiState.searchQuery.isNotEmpty())
+            EmptyClientsView(
+                query = uiState.searchQuery,
+                onClearSearch = onClearSearch
+            )
         }
         else -> {
             ClientsList(clients = uiState.clients, onClientClick = onClientClick)
@@ -203,35 +222,49 @@ private fun ClientsList(
 }
 
 @Composable
-private fun EmptyClientsView(hasFilter: Boolean, modifier: Modifier = Modifier) {
+private fun EmptyClientsView(
+    query: String,
+    onClearSearch: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isSearching = query.isNotBlank()
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 24.dp)
+        ) {
             Icon(
-                imageVector = Icons.Outlined.People,
+                imageVector = if (isSearching) Icons.Outlined.SearchOff else Icons.Outlined.People,
                 contentDescription = null,
                 modifier = Modifier.size(56.dp),
                 tint = TextMuted.copy(alpha = 0.5f)
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = if (hasFilter) "No clients match your search" else "No clients yet",
+                text = if (isSearching) "No clients found matching '$query'" else "No clients yet",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = TextHeading
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = if (hasFilter) {
-                    "Try a different name or number"
+                text = if (isSearching) {
+                    "Check spelling or try a different 10-digit number"
                 } else {
                     "Clients automatically appear when appointments are booked"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted
             )
+            if (isSearching) {
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(onClick = onClearSearch) {
+                    Text("Clear Search", color = BrandPrimary)
+                }
+            }
         }
     }
 }

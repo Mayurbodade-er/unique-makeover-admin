@@ -189,6 +189,9 @@ class AppointmentRepositoryImplTest {
         override fun observeClientProfiles(): Flow<List<ClientProfileAggregate>> =
             flowOf(emptyList())
 
+        override fun searchClientProfiles(query: String): Flow<List<ClientProfileAggregate>> =
+            flowOf(emptyList())
+
         override suspend fun count(): Int = storedEntities.size
     }
 }

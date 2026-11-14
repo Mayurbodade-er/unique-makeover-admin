@@ -2,7 +2,7 @@ package com.uniquemakeover.admin.feature.clients.presentation.list
 
 import com.uniquemakeover.admin.feature.clients.domain.model.ClientProfile
 import com.uniquemakeover.admin.feature.clients.domain.repository.ClientProfileRepository
-import com.uniquemakeover.admin.feature.clients.domain.usecase.GetClientProfilesUseCase
+import com.uniquemakeover.admin.feature.clients.domain.usecase.SearchClientProfilesUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -60,11 +61,8 @@ class ClientsViewModelTest {
 
     @Test
     fun uiState_loadsProfilesSuccessfully() = runTest(testDispatcher) {
-        val fakeRepo = object : ClientProfileRepository {
-            override fun getClientProfiles(): Flow<List<ClientProfile>> = flowOf(sampleProfiles)
-            override fun searchClientProfiles(query: String): Flow<List<ClientProfile>> = flowOf(sampleProfiles)
-        }
-        val useCase = GetClientProfilesUseCase(fakeRepo)
+        val fakeRepo = createFakeRepository(sampleProfiles)
+        val useCase = SearchClientProfilesUseCase(fakeRepo)
         val viewModel = ClientsViewModel(useCase)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -79,12 +77,9 @@ class ClientsViewModelTest {
     }
 
     @Test
-    fun onSearchQueryChange_filtersByName() = runTest(testDispatcher) {
-        val fakeRepo = object : ClientProfileRepository {
-            override fun getClientProfiles(): Flow<List<ClientProfile>> = flowOf(sampleProfiles)
-            override fun searchClientProfiles(query: String): Flow<List<ClientProfile>> = flowOf(sampleProfiles)
-        }
-        val useCase = GetClientProfilesUseCase(fakeRepo)
+    fun onSearchQueryChange_filtersByName_afterDebounce() = runTest(testDispatcher) {
+        val fakeRepo = createFakeRepository(sampleProfiles)
+        val useCase = SearchClientProfilesUseCase(fakeRepo)
         val viewModel = ClientsViewModel(useCase)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -93,6 +88,11 @@ class ClientsViewModelTest {
         advanceUntilIdle()
 
         viewModel.onSearchQueryChange("Pooja")
+        advanceTimeBy(100) // Before 150ms debounce
+        // Still has old results
+        assertEquals(2, viewModel.uiState.value.clients.size)
+
+        advanceTimeBy(100) // After 150ms debounce
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -102,11 +102,8 @@ class ClientsViewModelTest {
 
     @Test
     fun onSearchQueryChange_filtersByPhoneSubstring() = runTest(testDispatcher) {
-        val fakeRepo = object : ClientProfileRepository {
-            override fun getClientProfiles(): Flow<List<ClientProfile>> = flowOf(sampleProfiles)
-            override fun searchClientProfiles(query: String): Flow<List<ClientProfile>> = flowOf(sampleProfiles)
-        }
-        val useCase = GetClientProfilesUseCase(fakeRepo)
+        val fakeRepo = createFakeRepository(sampleProfiles)
+        val useCase = SearchClientProfilesUseCase(fakeRepo)
         val viewModel = ClientsViewModel(useCase)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -115,6 +112,7 @@ class ClientsViewModelTest {
         advanceUntilIdle()
 
         viewModel.onSearchQueryChange("3210")
+        advanceTimeBy(200)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -123,12 +121,9 @@ class ClientsViewModelTest {
     }
 
     @Test
-    fun onSearchQueryChange_whenCleared_restoresAllProfiles() = runTest(testDispatcher) {
-        val fakeRepo = object : ClientProfileRepository {
-            override fun getClientProfiles(): Flow<List<ClientProfile>> = flowOf(sampleProfiles)
-            override fun searchClientProfiles(query: String): Flow<List<ClientProfile>> = flowOf(sampleProfiles)
-        }
-        val useCase = GetClientProfilesUseCase(fakeRepo)
+    fun clearSearch_restoresAllProfilesImmediatelyWithoutDebounce() = runTest(testDispatcher) {
+        val fakeRepo = createFakeRepository(sampleProfiles)
+        val useCase = SearchClientProfilesUseCase(fakeRepo)
         val viewModel = ClientsViewModel(useCase)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -137,12 +132,15 @@ class ClientsViewModelTest {
         advanceUntilIdle()
 
         viewModel.onSearchQueryChange("Pooja")
+        advanceTimeBy(200)
         advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.clients.size)
 
-        viewModel.onSearchQueryChange("")
+        // Clear search should restore instantly (0ms debounce)
+        viewModel.clearSearch()
         advanceUntilIdle()
         assertEquals(2, viewModel.uiState.value.clients.size)
+        assertEquals("", viewModel.uiState.value.searchQuery)
     }
 
     @Test
@@ -151,9 +149,11 @@ class ClientsViewModelTest {
             override fun getClientProfiles(): Flow<List<ClientProfile>> = flow {
                 throw IllegalStateException("Database query failed")
             }
-            override fun searchClientProfiles(query: String): Flow<List<ClientProfile>> = flowOf(emptyList())
+            override fun searchClientProfiles(query: String): Flow<List<ClientProfile>> = flow {
+                throw IllegalStateException("Search query failed")
+            }
         }
-        val useCase = GetClientProfilesUseCase(fakeRepo)
+        val useCase = SearchClientProfilesUseCase(fakeRepo)
         val viewModel = ClientsViewModel(useCase)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -166,5 +166,18 @@ class ClientsViewModelTest {
         assertTrue(state.clients.isEmpty())
         assertNotNull(state.errorMessage)
         assertTrue(state.errorMessage?.contains("Database query failed") == true)
+    }
+
+    private fun createFakeRepository(profiles: List<ClientProfile>): ClientProfileRepository {
+        return object : ClientProfileRepository {
+            override fun getClientProfiles(): Flow<List<ClientProfile>> = flowOf(profiles)
+            override fun searchClientProfiles(query: String): Flow<List<ClientProfile>> {
+                val trimmed = query.trim()
+                val filtered = profiles.filter {
+                    it.name.contains(trimmed, ignoreCase = true) || it.phone.contains(trimmed)
+                }
+                return flowOf(filtered)
+            }
+        }
     }
 }
