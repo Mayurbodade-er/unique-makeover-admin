@@ -5,5 +5,7 @@ data class ClientDetailActions(
     val onTabSelected: (Int) -> Unit = {},
     val onCallClick: () -> Unit = {},
     val onWhatsAppClick: () -> Unit = {},
-    val onQuickRebookClick: () -> Unit = {}
+    val onQuickRebookClick: () -> Unit = {},
+    val onNoteChange: (String) -> Unit = {},
+    val onFlushNote: () -> Unit = {}
 )

@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import com.uniquemakeover.admin.core.domain.model.AppointmentStatus
 import com.uniquemakeover.admin.core.ui.theme.UniqueMakeoverTheme
 import com.uniquemakeover.admin.feature.clients.domain.model.ClientHistoryItem
@@ -124,5 +125,33 @@ class ClientDetailScreenTest {
 
         composeTestRule.onNodeWithText("WhatsApp").performClick()
         assertTrue(whatsAppClicked)
+    }
+
+    @Test
+    fun clientDetailScreen_privateNotesTab_rendersNoteEditorAndTriggersChange() {
+        var typedText = ""
+        val uiState = ClientDetailUiState(
+            isLoading = false,
+            clientName = "Neha",
+            phone = "9822001122",
+            selectedTab = 1,
+            noteText = "Allergic to bleach",
+            noteSaveStatus = NoteSaveStatus.SAVED
+        )
+
+        composeTestRule.setContent {
+            UniqueMakeoverTheme {
+                ClientDetailScreen(
+                    uiState = uiState,
+                    actions = ClientDetailActions(
+                        onNoteChange = { typedText = it }
+                    )
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Confidential Salon Notes").assertExists()
+        composeTestRule.onNodeWithText("Saved ✓").assertExists()
+        composeTestRule.onNodeWithText("Allergic to bleach").assertExists()
     }
 }

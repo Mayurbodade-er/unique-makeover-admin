@@ -13,10 +13,16 @@ interface ClientNoteDao {
     fun getNoteByPhone(phone: String): Flow<ClientNoteEntity?>
 
     @Query("SELECT * FROM client_notes WHERE phone = :phone LIMIT 1")
+    fun observeNoteByPhone(phone: String): Flow<ClientNoteEntity?>
+
+    @Query("SELECT * FROM client_notes WHERE phone = :phone LIMIT 1")
     suspend fun getNoteByPhoneSync(phone: String): ClientNoteEntity?
 
     @Upsert
     suspend fun upsert(note: ClientNoteEntity)
+
+    @Upsert
+    suspend fun insertOrUpdateNote(note: ClientNoteEntity)
 
     @Query("DELETE FROM client_notes WHERE phone = :phone")
     suspend fun deleteByPhone(phone: String)

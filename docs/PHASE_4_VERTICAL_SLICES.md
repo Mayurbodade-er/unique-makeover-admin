@@ -587,25 +587,63 @@ class SaveClientNoteUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`ClientNoteMapperTest.kt`:** Verifies mapping between `ClientNoteEntity` and domain `ClientNote`.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/domain/model/ClientNote.kt
-app/src/main/java/com/uniquemakeover/admin/core/domain/repository/ClientNoteRepository.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/data/mapper/ClientNoteMapper.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/data/repository/ClientNoteRepositoryImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/usecase/GetClientNoteUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/usecase/SaveClientNoteUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/components/NoteEditor.kt
-app/src/test/java/com/uniquemakeover/admin/feature/clients/domain/usecase/SaveClientNoteUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailViewModelNoteTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/clients/data/ClientNoteDaoIntegrationTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/clients/presentation/ClientNoteDebounceIntegrationTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/DatabaseModule.kt (Binds ClientNoteRepository)
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailScreen.kt (Integrates NoteEditor)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/domain/model/ClientNote.kt`
+   - **Architectural Role:** Domain Model (Core/Clients)
+   - **Why Created:** Encapsulates the immutable client private treatment note model (`phone`, `note`, `updatedAt`) independent of SQLite and UI frameworks.
+2. `app/src/main/java/com/uniquemakeover/admin/core/domain/repository/ClientNoteRepository.kt`
+   - **Architectural Role:** Domain Repository Interface (Core/Clients)
+   - **Why Created:** Defines contracts for observing and persisting client notes (`getNote`, `saveNote`) returning pure Kotlin domain entities and `DataResult`.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/usecase/GetClientNoteUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Implements the business logic of retrieving client notes by sanitized 10-digit phone number.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/usecase/SaveClientNoteUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Sanitizes client mobile phone numbers and persists private beauty/allergy notes via `ClientNoteRepository`.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/clients/data/mapper/ClientNoteMapper.kt`
+   - **Architectural Role:** Data Mapper
+   - **Why Created:** Pure mapping functions converting between Room `ClientNoteEntity` and domain `ClientNote`.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/clients/data/repository/ClientNoteRepositoryImpl.kt`
+   - **Architectural Role:** Data Repository Implementation
+   - **Why Created:** Bridges domain `ClientNoteRepository` with Room `ClientNoteDao` on the `@IoDispatcher` using `TimeProvider` timestamps.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/NoteSaveStatus.kt`
+   - **Architectural Role:** Presentation (UI State Enum)
+   - **Why Created:** Represents discrete autosave states (`SAVED`, `SAVING`) for the subtle status badge.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/components/NoteEditor.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Renders confidential salon notes luxury card with shield icon, animated save status badge, and multiline text input adhering to `desing.md` design tokens.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/clients/domain/usecase/SaveClientNoteUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Asserts phone sanitization and repository delegation with 100% deterministic unit checks.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/clients/data/mapper/ClientNoteMapperTest.kt`
+    - **Architectural Role:** Automated JVM Boundary Test
+    - **Why Created:** Validates bidirectional mapping fidelity between `ClientNoteEntity` and `ClientNote`.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailViewModelNoteTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Verifies 500 ms debounced autosave, save status transitions (`SAVING` $\rightarrow$ `SAVED`), and immediate synchronous flush on exit without waiting for debounce.
+12. `app/src/test/java/com/uniquemakeover/admin/feature/clients/data/ClientNoteDaoIntegrationTest.kt`
+    - **Architectural Role:** Automated Integration Test (Robolectric / In-Memory Room)
+    - **Why Created:** Verifies atomic note insertion, observation, and upsert overwrite behavior with SQLite WAL mode.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/ClientNoteDao.kt`
+   - **Why Modified:** Added `observeNoteByPhone` and `insertOrUpdateNote` aliases for backwards and architectural contract compatibility.
+2. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Bound `ClientNoteRepository` interface to `ClientNoteRepositoryImpl` with `@Singleton` scope.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailUiState.kt`
+   - **Why Modified:** Added `noteText: String` and `noteSaveStatus: NoteSaveStatus` fields.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailActions.kt`
+   - **Why Modified:** Added `onNoteChange` and `onFlushNote` lambdas to decouple presentation events from ViewModel.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailViewModel.kt`
+   - **Why Modified:** Incorporated initial note loading, 500ms debounced autosave flow, `flushPendingNote()` in `NonCancellable` context on screen exit / `onCleared()`, and UI state combination.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailScreen.kt`
+   - **Why Modified:** Integrated `NoteEditor` in the Private Notes tab, registered `DisposableEffect` for screen exit flush, and connected action handlers.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailViewModelTest.kt`
+   - **Why Modified:** Injected fake note use cases into `ClientDetailViewModel` test fixtures.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailScreenTest.kt`
+   - **Why Modified:** Added UI test verifying private notes tab renders `NoteEditor` and triggers note change events.
 
 ---
 

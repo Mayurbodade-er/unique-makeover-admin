@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -54,6 +54,7 @@ import com.uniquemakeover.admin.core.ui.theme.TextMuted
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
 import com.uniquemakeover.admin.feature.clients.presentation.detail.components.ClientMetricsHeader
 import com.uniquemakeover.admin.feature.clients.presentation.detail.components.HistoryList
+import com.uniquemakeover.admin.feature.clients.presentation.detail.components.NoteEditor
 
 @Composable
 fun ClientDetailRoute(
@@ -71,8 +72,16 @@ fun ClientDetailRoute(
             onTabSelected = viewModel::onTabSelected,
             onCallClick = { launchCallIntent(context, uiState.phone) },
             onWhatsAppClick = { launchWhatsAppIntent(context, uiState.phone) },
-            onQuickRebookClick = { onQuickRebook(uiState.phone) }
+            onQuickRebookClick = { onQuickRebook(uiState.phone) },
+            onNoteChange = viewModel::onNoteChange,
+            onFlushNote = viewModel::flushPendingNote
         )
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.flushPendingNote()
+        }
     }
 
     ClientDetailScreen(
@@ -162,7 +171,11 @@ private fun ClientDetailContent(
         if (uiState.selectedTab == 0) {
             HistoryList(historyItems = uiState.historyItems)
         } else {
-            PrivateNotesPlaceholderCard()
+            NoteEditor(
+                noteText = uiState.noteText,
+                saveStatus = uiState.noteSaveStatus,
+                onNoteChange = actions.onNoteChange
+            )
         }
     }
 }
@@ -194,40 +207,6 @@ private fun ClientDetailTabs(
             onClick = { onTabSelected(1) },
             text = { Text("Private Notes 🔒", fontWeight = FontWeight.SemiBold) }
         )
-    }
-}
-
-@Composable
-private fun PrivateNotesPlaceholderCard(modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = GoldSoft),
-        border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(BorderLine))
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Lock,
-                contentDescription = null,
-                tint = LuxuryGold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Private Salon Treatment Notes",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextHeading
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Hair allergy alerts and chemical formulas will appear here in Slice #19.",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextMuted
-            )
-        }
     }
 }
 

@@ -1,5 +1,6 @@
 package com.uniquemakeover.admin.core.di
 
+import com.uniquemakeover.admin.core.domain.repository.ClientNoteRepository
 import com.uniquemakeover.admin.core.domain.repository.PaymentRepository
 import com.uniquemakeover.admin.core.domain.repository.ServiceRepository
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
@@ -10,6 +11,7 @@ import com.uniquemakeover.admin.feature.appointments.domain.repository.Appointme
 import com.uniquemakeover.admin.feature.appointments.domain.repository.SlotRepository
 import com.uniquemakeover.admin.feature.auth.data.PinRepositoryImpl
 import com.uniquemakeover.admin.feature.auth.domain.repository.PinRepository
+import com.uniquemakeover.admin.feature.clients.data.repository.ClientNoteRepositoryImpl
 import com.uniquemakeover.admin.feature.clients.data.repository.ClientProfileRepositoryImpl
 import com.uniquemakeover.admin.feature.clients.domain.repository.ClientProfileRepository
 import com.uniquemakeover.admin.feature.services.data.image.LocalImageStore
@@ -73,4 +75,10 @@ abstract class RepositoryModule {
     abstract fun bindPaymentRepository(
         paymentRepositoryImpl: PaymentRepositoryImpl
     ): PaymentRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindClientNoteRepository(
+        clientNoteRepositoryImpl: ClientNoteRepositoryImpl
+    ): ClientNoteRepository
 }

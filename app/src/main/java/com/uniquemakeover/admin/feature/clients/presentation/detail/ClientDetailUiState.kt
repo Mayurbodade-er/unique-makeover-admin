@@ -10,5 +10,7 @@ data class ClientDetailUiState(
     val totalVisits: Int = 0,
     val historyItems: List<ClientHistoryItem> = emptyList(),
     val selectedTab: Int = 0,
+    val noteText: String = "",
+    val noteSaveStatus: NoteSaveStatus = NoteSaveStatus.SAVED,
     val errorMessage: String? = null
 )

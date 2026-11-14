@@ -2,10 +2,14 @@ package com.uniquemakeover.admin.feature.clients.presentation.detail
 
 import androidx.lifecycle.SavedStateHandle
 import com.uniquemakeover.admin.core.domain.model.AppointmentStatus
+import com.uniquemakeover.admin.core.domain.model.ClientNote
+import com.uniquemakeover.admin.core.domain.repository.ClientNoteRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
 import com.uniquemakeover.admin.feature.appointments.domain.repository.AppointmentRepository
 import com.uniquemakeover.admin.feature.clients.domain.usecase.GetClientHistoryUseCase
+import com.uniquemakeover.admin.feature.clients.domain.usecase.GetClientNoteUseCase
+import com.uniquemakeover.admin.feature.clients.domain.usecase.SaveClientNoteUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -31,6 +35,14 @@ import org.junit.Test
 class ClientDetailViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
+
+    private val fakeNoteRepo = object : ClientNoteRepository {
+        override fun getNote(phone: String): Flow<ClientNote?> = flowOf(null)
+        override suspend fun saveNote(phone: String, noteText: String): DataResult<Unit> =
+            DataResult.Success(Unit)
+    }
+    private val getNoteUseCase = GetClientNoteUseCase(fakeNoteRepo)
+    private val saveNoteUseCase = SaveClientNoteUseCase(fakeNoteRepo)
 
     private val sampleAppointments = listOf(
         Appointment(
@@ -98,7 +110,13 @@ class ClientDetailViewModelTest {
         val fakeRepo = FakeAppointmentRepo(sampleAppointments)
         val historyUseCase = GetClientHistoryUseCase(fakeRepo)
         val savedStateHandle = SavedStateHandle(mapOf("phone" to "9822001122"))
-        val viewModel = ClientDetailViewModel(savedStateHandle, fakeRepo, historyUseCase)
+        val viewModel = ClientDetailViewModel(
+            savedStateHandle,
+            fakeRepo,
+            historyUseCase,
+            getNoteUseCase,
+            saveNoteUseCase
+        )
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect()
@@ -122,7 +140,13 @@ class ClientDetailViewModelTest {
         val fakeRepo = FakeAppointmentRepo(sampleAppointments)
         val historyUseCase = GetClientHistoryUseCase(fakeRepo)
         val savedStateHandle = SavedStateHandle(mapOf("phone" to "9822001122"))
-        val viewModel = ClientDetailViewModel(savedStateHandle, fakeRepo, historyUseCase)
+        val viewModel = ClientDetailViewModel(
+            savedStateHandle,
+            fakeRepo,
+            historyUseCase,
+            getNoteUseCase,
+            saveNoteUseCase
+        )
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect()
@@ -173,7 +197,13 @@ class ClientDetailViewModelTest {
         }
         val historyUseCase = GetClientHistoryUseCase(fakeRepo)
         val savedStateHandle = SavedStateHandle(mapOf("phone" to "9822001122"))
-        val viewModel = ClientDetailViewModel(savedStateHandle, fakeRepo, historyUseCase)
+        val viewModel = ClientDetailViewModel(
+            savedStateHandle,
+            fakeRepo,
+            historyUseCase,
+            getNoteUseCase,
+            saveNoteUseCase
+        )
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect()
