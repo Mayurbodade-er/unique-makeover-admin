@@ -142,23 +142,65 @@ class DeleteServiceUseCase @Inject constructor(
   * Deletes "Gold Facial" from `services` table.
   * Asserts appointment entity still exists intact with all details.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/services/domain/model/ServiceDraft.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/AddServiceUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/UpdateServiceUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/DeleteServiceUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServiceEditorSheet.kt
-app/src/test/java/com/uniquemakeover/admin/feature/services/domain/usecase/AddServiceUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/services/domain/usecase/DeleteServiceUseCaseTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/services/data/SnapshotSafetyIntegrationTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/ServiceDao.kt (Adds insert, update, delete, countDuplicateNames)
-app/src/main/java/com/uniquemakeover/admin/feature/services/data/repository/ServiceRepositoryImpl.kt (Implements CRUD operations)
-app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesViewModel.kt (Integrates CRUD operations)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/services/domain/model/ServiceDraft.kt`
+   - **Architectural Role:** Domain Model (Draft)
+   - **Why Created:** Represents an uncommitted or in-editing service draft independent of database primary key generation, holding transient user input for validation.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/AddServiceUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Implements the core business logic of adding new beauty packages, enforcing title non-emptiness, case-insensitive duplicate prevention, rate boundary validation (₹0 to ₹1,00,000), and auto-generating unique service IDs.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/UpdateServiceUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Encapsulates service updates with duplicate name checking excluding the target service's own ID, preserving snapshot safety across the parlour catalog.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/DeleteServiceUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Encapsulates service deletion from repository; ensures existing appointments retain denormalized historical service strings without cascade deletion.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/ServiceOperations.kt`
+   - **Architectural Role:** Domain Composite Model / Service Operations Bundler
+   - **Why Created:** Groups catalog mutation use cases (`add`, `update`, `delete`) to keep ViewModel dependencies lean, modular, and strictly below Detekt constructor parameter limits.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServiceEditorSheet.kt`
+   - **Architectural Role:** Presentation (Compose Modal Bottom Sheet)
+   - **Why Created:** Renders the bottom sheet editor for creating and updating parlour services, displaying photo placeholder, styled text inputs with currency prefix, and destructive delete action adhering to `desing.md`.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServiceEditorActions.kt`
+   - **Architectural Role:** Presentation (Compose Actions Callback Model)
+   - **Why Created:** Bundles UI callback event listeners for the service editor sheet, decoupling presentation events and satisfying Detekt's `LongParameterList` and `MatchingDeclarationName` rules.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/services/domain/usecase/AddServiceUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies valid draft persistence, duplicate name collision rejection, empty title validation, and rate boundary enforcement (0 to 100,000).
+9. `app/src/test/java/com/uniquemakeover/admin/feature/services/domain/usecase/DeleteServiceUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies service deletion delegation and repository error propagation with pure Kotlin mock fakes.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/services/data/SnapshotSafetyIntegrationTest.kt`
+    - **Architectural Role:** Room In-Memory JVM Integration Test
+    - **Why Created:** Verifies that updating a service's rate in the catalog or deleting a service from SQLite strictly leaves past appointments' frozen price snapshot and service summary string untouched.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/ServiceDao.kt`
+   - **Why Modified:** Added `countDuplicateNames(name, excludeId)` to execute case-insensitive name uniqueness checks.
+2. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Added `@Suppress("TooManyFunctions")` and `countUpcomingAppointmentsForService(serviceId, today)` to detect future bookings using this service before catalog deletion.
+3. `app/src/main/java/com/uniquemakeover/admin/core/domain/repository/ServiceRepository.kt`
+   - **Why Modified:** Enhanced `saveService` and `deleteService` contracts to return `DataResult<Unit>` and added `countDuplicateNames`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/repository/AppointmentRepository.kt`
+   - **Why Modified:** Added `countUpcomingAppointmentsForService(serviceId, today)` to repository contract.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/services/data/repository/ServiceRepositoryImpl.kt`
+   - **Why Modified:** Implemented `saveService`, `deleteService`, and `countDuplicateNames` on `@IoDispatcher` with SQLite exception mapping to `DataResult`.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/AppointmentRepositoryImpl.kt`
+   - **Why Modified:** Implemented `countUpcomingAppointmentsForService` delegating to `AppointmentDao`.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesUiState.kt`
+   - **Why Modified:** Added editor state fields (`isEditorOpen`, `editingService`, `editorName`, `editorRate`, `editorError`, `isSaving`, `deleteTarget`, `upcomingCountForDelete`).
+8. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesViewModel.kt`
+   - **Why Modified:** Injected `ServiceOperations` and `AppointmentRepository`, added workflows for creating, editing, validating, and deleting catalog services.
+9. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesScreen.kt`
+   - **Why Modified:** Added Add FAB, wired card tap to open edit sheet, wired `ServiceEditorSheet`, and wired `ConfirmDialog` with upcoming appointments warning.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/services/presentation/ServicesViewModelTest.kt`
+    - **Why Modified:** Added comprehensive unit tests for add, edit, duplicate validation, delete confirmation, and upcoming warning calculations.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/services/presentation/ServicesScreenTest.kt`
+    - **Why Modified:** Added UI tests for Add FAB click, card click, and form rendering in `ServiceEditorSheet`.
+12. Test fake DAOs and Repositories across test suites
+    - **Why Modified:** Updated test fakes to implement `countUpcomingAppointmentsForService` and updated `ServiceRepository` return types.
 
 ---
 

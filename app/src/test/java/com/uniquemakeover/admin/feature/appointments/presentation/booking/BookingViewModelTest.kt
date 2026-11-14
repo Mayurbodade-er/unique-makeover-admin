@@ -254,8 +254,9 @@ class BookingViewModelTest {
     private class FakeServiceRepository(private val services: List<Service>) : ServiceRepository {
         override fun getServices(): Flow<List<Service>> = flowOf(services)
         override suspend fun getServiceById(id: String): Service? = services.find { it.id == id }
-        override suspend fun saveService(service: Service) = Unit
-        override suspend fun deleteService(id: String) = Unit
+        override suspend fun saveService(service: Service): DataResult<Unit> = DataResult.Success(Unit)
+        override suspend fun deleteService(id: String): DataResult<Unit> = DataResult.Success(Unit)
+        override suspend fun countDuplicateNames(name: String, excludeId: String): Int = 0
     }
 
     private class FakeSettingsRepository : SettingsRepository {
@@ -298,6 +299,7 @@ class BookingViewModelTest {
             DataResult.Success(Unit)
         override suspend fun deleteById(id: String): DataResult<Unit> =
             DataResult.Success(Unit)
+        override suspend fun countUpcomingAppointmentsForService(serviceId: String, today: String): Int = 0
         override suspend fun count(): Int = insertedAppointments.size
     }
 

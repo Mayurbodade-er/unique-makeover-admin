@@ -168,6 +168,8 @@ class StatusLifecycleUseCaseTest {
             return DataResult.Success(Unit)
         }
 
+        override suspend fun countUpcomingAppointmentsForService(serviceId: String, today: String): Int = 0
+
         override suspend fun count(): Int = storage.size
     }
 

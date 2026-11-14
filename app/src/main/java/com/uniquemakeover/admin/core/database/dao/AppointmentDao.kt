@@ -10,6 +10,7 @@ import com.uniquemakeover.admin.core.database.entity.AppointmentEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
+@Suppress("TooManyFunctions")
 interface AppointmentDao {
 
     @Query("SELECT * FROM appointments ORDER BY date DESC, time DESC")
@@ -90,6 +91,12 @@ interface AppointmentDao {
 
     @Query("DELETE FROM appointments WHERE id = :id")
     suspend fun deleteById(id: String): Int
+
+    @Query(
+        "SELECT COUNT(*) FROM appointments " +
+            "WHERE date >= :today AND status != 'cancelled' AND (serviceIds LIKE '%\"' || :serviceId || '\"%')"
+    )
+    suspend fun countUpcomingAppointmentsForService(serviceId: String, today: String): Int
 
     @Query("SELECT COUNT(*) FROM appointments")
     suspend fun count(): Int

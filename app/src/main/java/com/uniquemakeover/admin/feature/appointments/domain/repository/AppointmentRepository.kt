@@ -22,5 +22,6 @@ interface AppointmentRepository {
     suspend fun updateStatus(id: String, status: AppointmentStatus): DataResult<Unit>
     suspend fun deleteAppointment(appointment: Appointment): DataResult<Unit>
     suspend fun deleteById(id: String): DataResult<Unit>
+    suspend fun countUpcomingAppointmentsForService(serviceId: String, today: String): Int
     suspend fun count(): Int
 }

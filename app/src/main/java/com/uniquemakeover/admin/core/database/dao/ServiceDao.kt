@@ -39,6 +39,9 @@ interface ServiceDao {
     @Query("DELETE FROM services WHERE id = :id")
     suspend fun deleteById(id: String)
 
+    @Query("SELECT COUNT(*) FROM services WHERE LOWER(name) = LOWER(:name) AND id != :excludeId")
+    suspend fun countDuplicateNames(name: String, excludeId: String): Int
+
     @Query("SELECT COUNT(*) FROM services")
     suspend fun count(): Int
 }

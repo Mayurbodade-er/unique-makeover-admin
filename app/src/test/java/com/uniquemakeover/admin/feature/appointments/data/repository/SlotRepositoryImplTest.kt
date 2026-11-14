@@ -63,6 +63,7 @@ class SlotRepositoryImplTest {
         override suspend fun addPayment(id: String, amount: Int): Int = 1
         override suspend fun delete(appointment: AppointmentEntity) = Unit
         override suspend fun deleteById(id: String): Int = 1
+        override suspend fun countUpcomingAppointmentsForService(serviceId: String, today: String): Int = 0
         override suspend fun count(): Int = 0
     }
 }

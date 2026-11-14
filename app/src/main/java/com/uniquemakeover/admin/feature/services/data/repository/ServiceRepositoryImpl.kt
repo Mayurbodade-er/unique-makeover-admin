@@ -1,9 +1,12 @@
 package com.uniquemakeover.admin.feature.services.data.repository
 
+import android.database.SQLException
+import com.uniquemakeover.admin.core.common.UiText
 import com.uniquemakeover.admin.core.database.dao.ServiceDao
 import com.uniquemakeover.admin.core.di.IoDispatcher
 import com.uniquemakeover.admin.core.domain.model.Service
 import com.uniquemakeover.admin.core.domain.repository.ServiceRepository
+import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.feature.services.data.mapper.toDomain
 import com.uniquemakeover.admin.feature.services.data.mapper.toEntity
 import kotlinx.coroutines.CoroutineDispatcher
@@ -32,15 +35,31 @@ class ServiceRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun saveService(service: Service) {
-        withContext(ioDispatcher) {
-            serviceDao.insert(service.toEntity())
+    override suspend fun saveService(service: Service): DataResult<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                serviceDao.insert(service.toEntity())
+                DataResult.Success(Unit)
+            } catch (e: SQLException) {
+                DataResult.Error(UiText.DynamicString(e.localizedMessage ?: "Failed to save service"))
+            }
         }
     }
 
-    override suspend fun deleteService(id: String) {
-        withContext(ioDispatcher) {
-            serviceDao.deleteById(id)
+    override suspend fun deleteService(id: String): DataResult<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                serviceDao.deleteById(id)
+                DataResult.Success(Unit)
+            } catch (e: SQLException) {
+                DataResult.Error(UiText.DynamicString(e.localizedMessage ?: "Failed to delete service"))
+            }
+        }
+    }
+
+    override suspend fun countDuplicateNames(name: String, excludeId: String): Int {
+        return withContext(ioDispatcher) {
+            serviceDao.countDuplicateNames(name, excludeId)
         }
     }
 }

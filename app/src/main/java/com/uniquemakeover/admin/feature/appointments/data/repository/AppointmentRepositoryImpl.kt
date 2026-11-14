@@ -122,5 +122,11 @@ class AppointmentRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun countUpcomingAppointmentsForService(serviceId: String, today: String): Int {
+        return withContext(ioDispatcher) {
+            appointmentDao.countUpcomingAppointmentsForService(serviceId, today)
+        }
+    }
+
     override suspend fun count(): Int = withContext(ioDispatcher) { appointmentDao.count() }
 }

@@ -99,6 +99,8 @@ class DeleteAppointmentUseCaseTest {
             }
         }
 
+        override suspend fun countUpcomingAppointmentsForService(serviceId: String, today: String): Int = 0
+
         override suspend fun count(): Int = 0
     }
 

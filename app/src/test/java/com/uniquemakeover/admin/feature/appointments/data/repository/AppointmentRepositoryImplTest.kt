@@ -179,6 +179,12 @@ class AppointmentRepositoryImplTest {
             return if (removed) 1 else 0
         }
 
+        override suspend fun countUpcomingAppointmentsForService(serviceId: String, today: String): Int {
+            return storedEntities.count {
+                it.date >= today && it.status != "cancelled" && it.serviceIds.contains(serviceId)
+            }
+        }
+
         override suspend fun count(): Int = storedEntities.size
     }
 }
