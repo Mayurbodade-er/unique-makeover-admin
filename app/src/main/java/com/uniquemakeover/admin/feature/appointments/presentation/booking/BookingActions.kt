@@ -7,6 +7,7 @@ data class BookingActions(
     val onNameChange: (String) -> Unit = {},
     val onPhoneChange: (String) -> Unit = {},
     val onToggleService: (Service) -> Unit = {},
+    val onSelectDate: (String) -> Unit = {},
     val onSelectSlot: (Slot) -> Unit = {},
     val onSelectStaff: (String) -> Unit = {},
     val onDiscountChange: (Int) -> Unit = {},

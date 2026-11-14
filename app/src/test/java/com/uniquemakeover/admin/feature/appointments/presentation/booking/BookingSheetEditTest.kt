@@ -54,6 +54,7 @@ class BookingSheetEditTest {
         composeTestRule.onNodeWithText("Pooja Patil").assertIsDisplayed()
         composeTestRule.onNodeWithText("9822001122").assertIsDisplayed()
         composeTestRule.onNodeWithText("Gold Facial (₹800)").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Appointment Date").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("Update Appointment").performScrollTo().assertIsDisplayed()
     }
 

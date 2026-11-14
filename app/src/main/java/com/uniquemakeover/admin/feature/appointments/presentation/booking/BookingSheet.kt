@@ -1,6 +1,9 @@
 package com.uniquemakeover.admin.feature.appointments.presentation.booking
 
+import android.app.DatePickerDialog
+import android.content.Context
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +22,8 @@ import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -32,12 +37,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.uniquemakeover.admin.core.domain.model.Slot
 import com.uniquemakeover.admin.core.ui.components.PrimaryButton
+import com.uniquemakeover.admin.core.ui.theme.BlushSurface
 import com.uniquemakeover.admin.core.ui.theme.BorderLine
 import com.uniquemakeover.admin.core.ui.theme.BrandPrimary
 import com.uniquemakeover.admin.core.ui.theme.DangerCancel
@@ -50,6 +58,10 @@ import com.uniquemakeover.admin.feature.appointments.presentation.booking.compon
 import com.uniquemakeover.admin.feature.appointments.presentation.booking.components.ServiceMultiSelect
 import com.uniquemakeover.admin.feature.appointments.presentation.booking.components.SlotGrid
 import com.uniquemakeover.admin.feature.appointments.presentation.booking.components.StaffDropdown
+import java.time.LocalDate
+import java.util.Locale
+
+private const val MIN_DATE_SLACK_MS = 1000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +83,7 @@ fun BookingSheet(
             onNameChange = viewModel::updateName,
             onPhoneChange = viewModel::updatePhone,
             onToggleService = viewModel::toggleService,
+            onSelectDate = viewModel::selectDate,
             onSelectSlot = viewModel::selectSlot,
             onSelectStaff = viewModel::selectStaff,
             onDiscountChange = viewModel::updateDiscount,
@@ -120,6 +133,11 @@ fun BookingSheetContent(
             selectedServices = uiState.draft.selectedServices,
             onToggleService = actions.onToggleService,
             errorMessage = uiState.serviceError
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        DateSelectionSection(
+            uiState = uiState,
+            onSelectDate = actions.onSelectDate
         )
         Spacer(modifier = Modifier.height(16.dp))
         SlotSelectionSection(
@@ -181,6 +199,107 @@ private fun BookingSheetHeader(
         }
     }
     Spacer(modifier = Modifier.height(16.dp))
+}
+
+@Composable
+private fun DateSelectionSection(
+    uiState: BookingUiState,
+    onSelectDate: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val isLocked = uiState.isDateTimeLocked
+    val currentDate = uiState.draft.date
+    val today = remember { LocalDate.now().toString() }
+    val tomorrow = remember { LocalDate.now().plusDays(1).toString() }
+
+    Column {
+        Text(
+            text = "Appointment Date",
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isLocked) WarningDue else TextMuted
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            DateChip(
+                label = "Today",
+                isSelected = currentDate == today,
+                isEnabled = !isLocked,
+                onClick = { onSelectDate(today) }
+            )
+            DateChip(
+                label = "Tomorrow",
+                isSelected = currentDate == tomorrow,
+                isEnabled = !isLocked,
+                onClick = { onSelectDate(tomorrow) }
+            )
+            val isCustom = currentDate != today && currentDate != tomorrow
+            val customLabel = if (isCustom && currentDate.isNotBlank()) currentDate else "Pick Date 📅"
+            DateChip(
+                label = customLabel,
+                isSelected = isCustom,
+                isEnabled = !isLocked,
+                onClick = { showDatePicker(context, currentDate, onSelectDate) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DateChip(
+    label: String,
+    isSelected: Boolean,
+    isEnabled: Boolean,
+    onClick: () -> Unit
+) {
+    FilterChip(
+        selected = isSelected,
+        onClick = { if (isEnabled) onClick() },
+        enabled = isEnabled,
+        label = {
+            Text(
+                text = label,
+                color = if (isSelected) BrandPrimary else if (isEnabled) TextPrimary else TextMuted
+            )
+        },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = BlushSurface,
+            selectedLabelColor = BrandPrimary,
+            containerColor = Color.Transparent
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) BrandPrimary else BorderLine
+        )
+    )
+}
+
+private fun showDatePicker(
+    context: Context,
+    currentDate: String,
+    onDateSelected: (String) -> Unit
+) {
+    val parsed = runCatching { LocalDate.parse(currentDate) }.getOrNull() ?: LocalDate.now()
+    val dialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            val formatted = String.format(
+                Locale.US,
+                "%04d-%02d-%02d",
+                year,
+                month + 1,
+                dayOfMonth
+            )
+            onDateSelected(formatted)
+        },
+        parsed.year,
+        parsed.monthValue - 1,
+        parsed.dayOfMonth
+    )
+    dialog.datePicker.minDate = System.currentTimeMillis() - MIN_DATE_SLACK_MS
+    dialog.show()
 }
 
 @Composable
