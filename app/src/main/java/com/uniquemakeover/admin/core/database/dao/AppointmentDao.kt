@@ -18,6 +18,9 @@ interface AppointmentDao {
     @Query("SELECT * FROM appointments WHERE date = :date ORDER BY time ASC")
     fun getAppointmentsByDate(date: String): Flow<List<AppointmentEntity>>
 
+    @Query("SELECT * FROM appointments WHERE date = :today ORDER BY time ASC")
+    fun observeTodayAppointmentsRaw(today: String): Flow<List<AppointmentEntity>>
+
     @Query("SELECT * FROM appointments WHERE date = :date ORDER BY time ASC")
     suspend fun getAppointmentsByDateSync(date: String): List<AppointmentEntity>
 

@@ -18,6 +18,7 @@ import com.uniquemakeover.admin.core.ui.components.AppScaffold
 import com.uniquemakeover.admin.core.ui.theme.TextMuted
 import com.uniquemakeover.admin.feature.appointments.presentation.AppointmentsRoute
 import com.uniquemakeover.admin.feature.auth.presentation.PinLockRoute
+import com.uniquemakeover.admin.feature.dashboard.presentation.DashboardRoute
 import com.uniquemakeover.admin.feature.services.presentation.ServicesRoute
 import com.uniquemakeover.admin.feature.settings.presentation.SettingsRoute
 
@@ -47,46 +48,61 @@ fun UniqueMakeoverNavHost(
         showNavigation = showNavigation,
         modifier = modifier
     ) {
-        NavHost(
+        UniqueMakeoverNavGraph(
             navController = navController,
             startDestination = startDestination
-        ) {
-            composable(Routes.PinLock) {
-                PinLockRoute(
-                    viewModel = hiltViewModel(),
-                    onAuthenticated = {
-                        navController.navigate(Routes.Services) {
-                            popUpTo(Routes.PinLock) { inclusive = true }
-                        }
+        )
+    }
+}
+
+@Composable
+private fun UniqueMakeoverNavGraph(
+    navController: NavHostController,
+    startDestination: String,
+    modifier: Modifier = Modifier
+) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        modifier = modifier
+    ) {
+        composable(Routes.PinLock) {
+            PinLockRoute(
+                viewModel = hiltViewModel(),
+                onAuthenticated = {
+                    navController.navigate(Routes.Services) {
+                        popUpTo(Routes.PinLock) { inclusive = true }
                     }
-                )
-            }
+                }
+            )
+        }
 
-            composable(Routes.Dashboard) {
-                PlaceholderScreen(title = "Dashboard")
-            }
+        composable(Routes.Dashboard) {
+            DashboardRoute(
+                viewModel = hiltViewModel()
+            )
+        }
 
-            composable(Routes.Appointments) {
-                AppointmentsRoute(
-                    viewModel = hiltViewModel()
-                )
-            }
+        composable(Routes.Appointments) {
+            AppointmentsRoute(
+                viewModel = hiltViewModel()
+            )
+        }
 
-            composable(Routes.Services) {
-                ServicesRoute(
-                    viewModel = hiltViewModel()
-                )
-            }
+        composable(Routes.Services) {
+            ServicesRoute(
+                viewModel = hiltViewModel()
+            )
+        }
 
-            composable(Routes.Reminders) {
-                PlaceholderScreen(title = "Reminders")
-            }
+        composable(Routes.Reminders) {
+            PlaceholderScreen(title = "Reminders")
+        }
 
-            composable(Routes.Settings) {
-                SettingsRoute(
-                    viewModel = hiltViewModel()
-                )
-            }
+        composable(Routes.Settings) {
+            SettingsRoute(
+                viewModel = hiltViewModel()
+            )
         }
     }
 }

@@ -265,25 +265,55 @@ class GetDashboardKpisUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`CurrencyFormatterTest.kt`:** Validates Indian currency formatting rules (e.g. `1000` $\rightarrow$ `"₹ 1,000"`, `150000` $\rightarrow$ `"₹ 1,50,000"`).
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/util/CurrencyFormatter.kt
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/domain/model/DashboardKpis.kt
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/domain/usecase/GetDashboardKpisUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModel.kt
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardUiState.kt
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/components/KpiCard.kt
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/components/KpiRow.kt
-app/src/test/java/com/uniquemakeover/admin/core/util/CurrencyFormatterTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/dashboard/domain/usecase/GetDashboardKpisUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModelTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardKpiIntegrationTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt (Adds observeTodayAppointmentsRaw)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/util/CurrencyFormatter.kt`
+   - **Architectural Role:** Core Utility (Pure Kotlin)
+   - **Why Created:** Implements Indian numbering system grouping (e.g. `₹ 1,50,000`) and currency prefixing with zero locale dependencies, ensuring identical rendering across JVM unit tests and Android hardware.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/domain/model/DashboardKpis.kt`
+   - **Architectural Role:** Domain Model (KPI Aggregate)
+   - **Why Created:** Encapsulates immutable daily operational metrics (`bookedCount`, `completedCount`, `cancelledCount`, `scheduledVolume`, `collectedRevenue`, `balanceOutstanding`) free of presentation or SQLite framework dependencies.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/domain/usecase/GetDashboardKpisUseCase.kt`
+   - **Architectural Role:** Pure Domain UseCase
+   - **Why Created:** Implements core business logic of daily KPI calculation: queries today's appointments via `TimeProvider`, excludes cancelled bookings from volume and revenue, and clamps overpaid balances to zero.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardUiState.kt`
+   - **Architectural Role:** Presentation (UI State)
+   - **Why Created:** Immutable presentation state model for the Dashboard screen tracking loading progress, formatted operational date, and live `DashboardKpis`.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModel.kt`
+   - **Architectural Role:** Presentation (ViewModel)
+   - **Why Created:** Reactive Hilt ViewModel managing dashboard state via `StateFlow` and continuously streaming real-time KPI computations from `GetDashboardKpisUseCase`.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/components/KpiCard.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Renders luxury operational cards with rounded borders, circular icon containers, semantic typography, and Indian currency values conforming to `desing.md`.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/components/KpiRow.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Multi-card responsive layout organizing the 6 operational KPI metrics into a 2-column grid on phones and multi-column row on tablets.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt`
+   - **Architectural Role:** Presentation (Screen & Route)
+   - **Why Created:** Root Dashboard destination hosted on `Routes.Dashboard` displaying burgundy top app bar, date badge, and hosting `KpiRow`.
+9. `app/src/test/java/com/uniquemakeover/admin/core/util/CurrencyFormatterTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies Indian currency formatting rules (zeros, hundreds, thousands, lakhs, crores, negatives) with 100% deterministic assertions.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/domain/usecase/GetDashboardKpisUseCaseTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Verifies mathematical KPI aggregation, cancelled booking exclusions, zero states, and overpayment due clamping.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModelTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Verifies `DashboardViewModel` initialization, date tracking, and reactive UI state emissions.
+12. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardKpiIntegrationTest.kt`
+    - **Architectural Role:** Automated JVM / Robolectric Integration Test
+    - **Why Created:** Executes full-stack integration test between in-memory Room database, repository, use case, ViewModel, and Compose UI nodes.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Added `observeTodayAppointmentsRaw` indexed Room query.
+2. `app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt`
+   - **Why Modified:** Connected `Routes.Dashboard` to `DashboardRoute` and extracted `UniqueMakeoverNavGraph` sub-composable to maintain Detekt method length constraints.
+3. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/repository/AppointmentRepositoryImplTest.kt`
+   - **Why Modified:** Added `observeTodayAppointmentsRaw` stub to test fake DAO.
+4. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/repository/SlotRepositoryImplTest.kt`
+   - **Why Modified:** Added `observeTodayAppointmentsRaw` stub to test fake DAO.
 
 ---
 

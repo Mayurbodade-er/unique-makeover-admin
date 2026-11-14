@@ -82,6 +82,9 @@ class AppointmentRepositoryImplTest {
         override fun getAppointmentsByDate(date: String): Flow<List<AppointmentEntity>> =
             flowOf(storedEntities.filter { it.date == date })
 
+        override fun observeTodayAppointmentsRaw(today: String): Flow<List<AppointmentEntity>> =
+            flowOf(storedEntities.filter { it.date == today })
+
         override suspend fun getAppointmentsByDateSync(date: String): List<AppointmentEntity> =
             storedEntities.filter { it.date == date }
 
