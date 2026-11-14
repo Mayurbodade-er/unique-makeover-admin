@@ -16,6 +16,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.uniquemakeover.admin.core.ui.components.AppScaffold
 import com.uniquemakeover.admin.core.ui.theme.TextMuted
+import com.uniquemakeover.admin.feature.appointments.presentation.AppointmentsRoute
 import com.uniquemakeover.admin.feature.auth.presentation.PinLockRoute
 import com.uniquemakeover.admin.feature.services.presentation.ServicesRoute
 import com.uniquemakeover.admin.feature.settings.presentation.SettingsRoute
@@ -66,7 +67,9 @@ fun UniqueMakeoverNavHost(
             }
 
             composable(Routes.Appointments) {
-                PlaceholderScreen(title = "Appointments")
+                AppointmentsRoute(
+                    viewModel = hiltViewModel()
+                )
             }
 
             composable(Routes.Services) {

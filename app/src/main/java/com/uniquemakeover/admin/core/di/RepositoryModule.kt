@@ -2,6 +2,8 @@ package com.uniquemakeover.admin.core.di
 
 import com.uniquemakeover.admin.core.domain.repository.ServiceRepository
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
+import com.uniquemakeover.admin.feature.appointments.data.repository.SlotRepositoryImpl
+import com.uniquemakeover.admin.feature.appointments.domain.repository.SlotRepository
 import com.uniquemakeover.admin.feature.auth.data.PinRepositoryImpl
 import com.uniquemakeover.admin.feature.auth.domain.repository.PinRepository
 import com.uniquemakeover.admin.feature.services.data.repository.ServiceRepositoryImpl
@@ -33,4 +35,10 @@ abstract class RepositoryModule {
     abstract fun bindSettingsRepository(
         settingsRepositoryImpl: SettingsRepositoryImpl
     ): SettingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSlotRepository(
+        slotRepositoryImpl: SlotRepositoryImpl
+    ): SlotRepository
 }

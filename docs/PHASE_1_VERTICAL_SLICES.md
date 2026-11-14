@@ -309,23 +309,67 @@ class GenerateAvailableSlotsUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`SlotGridTest.kt` (Compose UI Test):** Verifies that clicking a slot marked with `UnavailableReason.ALREADY_BOOKED` emits no click event.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/domain/model/Slot.kt
-app/src/main/java/com/uniquemakeover/admin/core/util/TimeProvider.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/repository/SlotRepository.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/SlotRepositoryImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/GenerateAvailableSlotsUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/components/SlotGrid.kt
-app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/GenerateAvailableSlotsUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/testutil/FakeTimeProvider.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/appointments/data/AppointmentDaoClashTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/di/AppModule.kt (Binds TimeProvider System implementation)
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt (Adds countClashingAppointments query)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/domain/model/Slot.kt`
+   - **Architectural Role:** Pure Domain Model
+   - **Why Created:** Encapsulates the immutable time slot entity (`time24`, `time12`, `isAvailable`, `reason`) and `UnavailableReason` (`ALREADY_BOOKED`, `PAST_TIME`) independent of frameworks or SQLite tables.
+2. `app/src/main/java/com/uniquemakeover/admin/core/util/TimeProvider.kt`
+   - **Architectural Role:** Core Utility Contract & Default Implementation
+   - **Why Created:** Decouples system wall-clock time (`LocalTime`, `LocalDate`) behind an injectable contract (`TimeProvider`, `DefaultTimeProvider`) to ensure 100% deterministic, drift-resistant time calculations and test harnesses.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/repository/SlotRepository.kt`
+   - **Architectural Role:** Domain Repository Interface
+   - **Why Created:** Defines the Clean Architecture contract for querying clash-free slot availability without leaking Room DAOs into the domain layer.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/SlotRepositoryImpl.kt`
+   - **Architectural Role:** Data Repository Implementation
+   - **Why Created:** Implements `SlotRepository` interface; bridges domain use cases with Room `AppointmentDao.countClashingAppointments()` on the `@IoDispatcher`.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/GenerateAvailableSlotsUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Implements the core business logic of generating daily time slots from operating hours, querying occupied slots from SQLite, evaluating past-time invalidation using injected `TimeProvider`, and enforcing boundary limits (`closeTime - slotDuration`).
+6. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/components/SlotGrid.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Renders the responsive time chip grid adhering to `desing.md`; adapts dynamically from 3 columns on phones to 4-6 columns on tablets with luxury gold selection state, red "Full" badge, and disabled past-time chips meeting $\ge 48\text{dp}$ touch targets.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentsUiState.kt`
+   - **Architectural Role:** Presentation (UI State)
+   - **Why Created:** Represents immutable state for appointment slot selection and daily schedule view tracking selected date, slots, active selection, and loading state.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentsViewModel.kt`
+   - **Architectural Role:** Presentation (ViewModel)
+   - **Why Created:** Hilt-injected ViewModel orchestrating dynamic slot generation via `GenerateAvailableSlotsUseCase` and managing date and slot selections with `StateFlow`.
+9. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentsScreen.kt`
+   - **Architectural Role:** Presentation (Screen & Route)
+   - **Why Created:** Appointments destination screen hosted on `Routes.Appointments`, featuring luxury burgundy app bar, date selection chips, and hosting `SlotGrid`.
+10. `app/src/test/java/com/uniquemakeover/admin/testutil/FakeTimeProvider.kt`
+    - **Architectural Role:** Automated Test Double
+    - **Why Created:** Provides controllable time and date provider for deterministic JVM testing of past-time invalidation.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/GenerateAvailableSlotsUseCaseTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Verifies slot count calculations, past-time pruning with `FakeTimeProvider`, clash mapping logic, and last slot boundary calculation.
+12. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/repository/SlotRepositoryImplTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Validates `SlotRepositoryImpl` clash checking against `AppointmentDao`.
+13. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/AppointmentDaoClashTest.kt`
+    - **Architectural Role:** Automated Integration Test (Room SQLite In-Memory)
+    - **Why Created:** Verifies Room clash query detection, cancelled status slot release, `excludeId` handling, and indexed lookup performance ($< 10\text{ ms}$).
+14. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/components/SlotGridTest.kt`
+    - **Architectural Role:** Automated Compose UI Test
+    - **Why Created:** Tests `SlotGrid` tap events, "Full" badge non-clickable state, "Past" chip state, and tablet grid responsiveness.
+15. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentsViewModelTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Tests ViewModel reactive state flow, slot loading on date change, and slot selection logic.
+16. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentsScreenTest.kt`
+    - **Architectural Role:** Automated Compose UI Test
+    - **Why Created:** Tests `AppointmentsScreen` top bar, header rendering, and slot grid user interactions.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/di/AppModule.kt`
+   - **Why Modified:** Bound `TimeProvider` to `DefaultTimeProvider`.
+2. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Bound `SlotRepositoryImpl` to `SlotRepository`.
+3. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Enhanced `countClashingAppointments` composite query to exclude both `'cancel'` and `'cancelled'` statuses.
+4. `app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt`
+   - **Why Modified:** Wired `AppointmentsRoute` to `Routes.Appointments`.
 
 ---
 

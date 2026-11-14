@@ -1,5 +1,7 @@
 package com.uniquemakeover.admin.core.di
 
+import com.uniquemakeover.admin.core.util.DefaultTimeProvider
+import com.uniquemakeover.admin.core.util.TimeProvider
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -21,4 +23,8 @@ object AppModule {
             prettyPrint = false
         }
     }
+
+    @Provides
+    @Singleton
+    fun provideTimeProvider(defaultTimeProvider: DefaultTimeProvider): TimeProvider = defaultTimeProvider
 }

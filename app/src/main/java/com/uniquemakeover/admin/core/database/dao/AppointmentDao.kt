@@ -35,7 +35,7 @@ interface AppointmentDao {
         SELECT COUNT(*) FROM appointments 
         WHERE date = :date 
           AND time = :time 
-          AND status != 'CANCELLED' 
+          AND LOWER(status) NOT IN ('cancel', 'cancelled') 
           AND (:excludeId IS NULL OR id != :excludeId)
         """
     )
