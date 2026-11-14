@@ -62,6 +62,9 @@ interface AppointmentDao {
     @Query("UPDATE appointments SET status = :status WHERE id = :id")
     suspend fun updateStatus(id: String, status: String): Int
 
+    @Query("UPDATE appointments SET paid = paid + :amount WHERE id = :id")
+    suspend fun addPayment(id: String, amount: Int): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(appointment: AppointmentEntity)
 

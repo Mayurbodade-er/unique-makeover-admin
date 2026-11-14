@@ -144,6 +144,16 @@ class AppointmentRepositoryImplTest {
             return 0
         }
 
+        override suspend fun addPayment(id: String, amount: Int): Int {
+            val index = storedEntities.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                val current = storedEntities[index]
+                storedEntities[index] = current.copy(paid = current.paid + amount)
+                return 1
+            }
+            return 0
+        }
+
         override suspend fun delete(appointment: AppointmentEntity) {
             storedEntities.removeAll { it.id == appointment.id }
         }

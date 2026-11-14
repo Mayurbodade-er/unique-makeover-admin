@@ -658,23 +658,53 @@ class RecordPaymentUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`PaymentDaoTest.kt` (In-Memory Room):** Verifies payment insertion and query by `appointmentId`.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/domain/model/PaymentMode.kt
-app/src/main/java/com/uniquemakeover/admin/core/domain/model/Payment.kt
-app/src/main/java/com/uniquemakeover/admin/core/domain/repository/PaymentRepository.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/PaymentRepositoryImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/RecordPaymentUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/payment/RecordPaymentDialog.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/payment/RecordPaymentViewModel.kt
-app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/RecordPaymentUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/payment/RecordPaymentViewModelTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/appointments/data/PaymentDaoTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/DatabaseModule.kt (Binds PaymentRepository)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/domain/model/PaymentMode.kt`
+   - **Architectural Role:** Domain Model (Core)
+   - **Why Created:** Defines the payment instrument enum (`CASH`, `UPI`) with safe fallback string deserialization, completely independent of UI or persistence libraries.
+2. `app/src/main/java/com/uniquemakeover/admin/core/domain/model/Payment.kt`
+   - **Architectural Role:** Domain Model (Core)
+   - **Why Created:** Encapsulates the immutable payment audit entity (`id`, `appointmentId`, `amount`, `mode`, `paidAt`) independent of Room SQLite entity structures.
+3. `app/src/main/java/com/uniquemakeover/admin/core/domain/repository/PaymentRepository.kt`
+   - **Architectural Role:** Domain Repository Interface
+   - **Why Created:** Declares the repository abstraction for storing and querying individual appointment payment records.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/mapper/PaymentMapper.kt`
+   - **Architectural Role:** Data Mapper
+   - **Why Created:** Bidirectionally converts between pure domain `Payment` models and Room `PaymentEntity` database objects.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/PaymentRepositoryImpl.kt`
+   - **Architectural Role:** Data Repository Implementation
+   - **Why Created:** Implements `PaymentRepository` interface; persists payment records and atomically increments `paid` amounts on `@IoDispatcher`.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/RecordPaymentUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Enforces core business validation rules: rejects non-positive payment amounts ($\le ₹0$), checks overpayments requiring explicit user confirmation when exceeding remaining balance due, and generates payment audit logs.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/payment/RecordPaymentUiState.kt`
+   - **Architectural Role:** Presentation (State Model)
+   - **Why Created:** Encapsulates immutable UI state for payment dialog including pre-filled balance due, payment mode toggles, and overpayment confirmation modal visibility.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/payment/RecordPaymentViewModel.kt`
+   - **Architectural Role:** Presentation (ViewModel)
+   - **Why Created:** Manages state transitions, filters input digits, invokes `RecordPaymentUseCase`, and controls overpayment confirmation prompts.
+9. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/payment/RecordPaymentDialog.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Modal bottom sheet adhering to `desing.md` tokens; renders financial summaries, payment mode toggle chips (`[💵 Cash]`, `[📱 UPI]`), and overpayment confirmation dialogs.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/RecordPaymentUseCaseTest.kt`
+    - **Architectural Role:** JVM Unit Test
+    - **Why Created:** Verifies positive payment processing, rejection of $\le ₹0$ amounts, and overpayment guard requiring confirmation.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/payment/RecordPaymentViewModelTest.kt`
+    - **Architectural Role:** JVM Unit Test
+    - **Why Created:** Verifies UI state prefilling, digit filtering, and overpayment prompt display logic.
+12. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/PaymentDaoTest.kt`
+    - **Architectural Role:** JVM Integration Test (Robolectric + Room SQLite)
+    - **Why Created:** Verifies SQLite database persistence in `payments` table and relational queries by `appointmentId`.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Added atomic `@Query("UPDATE appointments SET paid = paid + :amount WHERE id = :id") suspend fun addPayment`.
+2. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Bound `PaymentRepository` to `PaymentRepositoryImpl` as a singleton dependency.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt`
+   - **Why Modified:** Integrated `RecordPaymentDialog` into dashboard quick actions via `DashboardPaymentModal`.
 
 ---
 

@@ -47,8 +47,13 @@ import com.uniquemakeover.admin.core.ui.theme.BrandPrimary
 import com.uniquemakeover.admin.core.ui.theme.LuxuryGold
 import com.uniquemakeover.admin.core.ui.theme.TextMuted
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
+import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
 import com.uniquemakeover.admin.feature.appointments.presentation.booking.BookingSheet
+import com.uniquemakeover.admin.feature.appointments.presentation.booking.BookingUiState
 import com.uniquemakeover.admin.feature.appointments.presentation.booking.BookingViewModel
+import com.uniquemakeover.admin.feature.appointments.presentation.payment.RecordPaymentDialog
+import com.uniquemakeover.admin.feature.appointments.presentation.payment.RecordPaymentUiState
+import com.uniquemakeover.admin.feature.appointments.presentation.payment.RecordPaymentViewModel
 import com.uniquemakeover.admin.feature.dashboard.domain.model.ScheduleItem
 import com.uniquemakeover.admin.feature.dashboard.presentation.components.KpiRow
 import com.uniquemakeover.admin.feature.dashboard.presentation.components.ScheduleCardActions
@@ -60,22 +65,105 @@ import com.uniquemakeover.admin.feature.dashboard.presentation.components.Schedu
 fun DashboardRoute(
     viewModel: DashboardViewModel,
     bookingViewModel: BookingViewModel = hiltViewModel(),
+    paymentViewModel: RecordPaymentViewModel = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val bookingUiState by bookingViewModel.uiState.collectAsStateWithLifecycle()
+    val paymentUiState by paymentViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var isBookingOpen by remember { mutableStateOf(false) }
+    var paymentTarget by remember { mutableStateOf<Appointment?>(null) }
 
     val actions = remember(context, viewModel) {
         ScheduleCardActions(
-            onMarkDone = { appointment -> viewModel.markDone(appointment) },
-            onCancel = { appointment -> viewModel.cancel(appointment) },
-            onWhatsApp = { appointment -> openWhatsApp(context, appointment.phone) }
+            onMarkDone = { viewModel.markDone(it) },
+            onCancel = { viewModel.cancel(it) },
+            onRecordPayment = { paymentTarget = it },
+            onWhatsApp = { openWhatsApp(context, it.phone) }
         )
     }
 
+    DashboardSnackbarEffect(
+        viewModel = viewModel,
+        snackbarHostState = snackbarHostState,
+        context = context
+    )
+
+    DashboardScreen(
+        uiState = uiState,
+        actions = actions,
+        snackbarHostState = snackbarHostState,
+        onOpenBooking = {
+            bookingViewModel.loadInitialData()
+            isBookingOpen = true
+        },
+        modifier = modifier
+    )
+
+    DashboardBookingModal(
+        isOpen = isBookingOpen,
+        uiState = bookingUiState,
+        viewModel = bookingViewModel,
+        onDismiss = {
+            isBookingOpen = false
+            viewModel.refresh()
+        }
+    )
+
+    DashboardPaymentModal(
+        target = paymentTarget,
+        uiState = paymentUiState,
+        viewModel = paymentViewModel,
+        onDismiss = {
+            paymentTarget = null
+            viewModel.refresh()
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DashboardBookingModal(
+    isOpen: Boolean,
+    uiState: BookingUiState,
+    viewModel: BookingViewModel,
+    onDismiss: () -> Unit
+) {
+    if (isOpen) {
+        BookingSheet(
+            uiState = uiState,
+            viewModel = viewModel,
+            onDismiss = onDismiss
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DashboardPaymentModal(
+    target: Appointment?,
+    uiState: RecordPaymentUiState,
+    viewModel: RecordPaymentViewModel,
+    onDismiss: () -> Unit
+) {
+    if (target != null) {
+        RecordPaymentDialog(
+            appointment = target,
+            uiState = uiState,
+            viewModel = viewModel,
+            onDismiss = onDismiss
+        )
+    }
+}
+
+@Composable
+private fun DashboardSnackbarEffect(
+    viewModel: DashboardViewModel,
+    snackbarHostState: SnackbarHostState,
+    context: Context
+) {
     LaunchedEffect(viewModel) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
@@ -97,28 +185,6 @@ fun DashboardRoute(
                 }
             }
         }
-    }
-
-    DashboardScreen(
-        uiState = uiState,
-        actions = actions,
-        snackbarHostState = snackbarHostState,
-        onOpenBooking = {
-            bookingViewModel.loadInitialData()
-            isBookingOpen = true
-        },
-        modifier = modifier
-    )
-
-    if (isBookingOpen) {
-        BookingSheet(
-            uiState = bookingUiState,
-            viewModel = bookingViewModel,
-            onDismiss = {
-                isBookingOpen = false
-                viewModel.refresh()
-            }
-        )
     }
 }
 

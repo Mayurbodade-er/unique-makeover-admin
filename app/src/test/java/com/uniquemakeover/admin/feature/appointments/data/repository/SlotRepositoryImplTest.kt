@@ -56,6 +56,7 @@ class SlotRepositoryImplTest {
         override suspend fun insertAll(appointments: List<AppointmentEntity>) = Unit
         override suspend fun update(appointment: AppointmentEntity) = Unit
         override suspend fun updateStatus(id: String, status: String): Int = 1
+        override suspend fun addPayment(id: String, amount: Int): Int = 1
         override suspend fun delete(appointment: AppointmentEntity) = Unit
         override suspend fun count(): Int = 0
     }
