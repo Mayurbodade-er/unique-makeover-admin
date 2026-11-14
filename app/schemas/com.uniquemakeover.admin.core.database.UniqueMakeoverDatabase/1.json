@@ -1,0 +1,369 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "f4eae7366014497a2dd7f30ba4fd199a",
+    "entities": [
+      {
+        "tableName": "settings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `shop` TEXT NOT NULL, `tagline` TEXT NOT NULL, `adminPinHash` TEXT NOT NULL, `logoPath` TEXT, `bgPath` TEXT, `wa` TEXT NOT NULL, `upi` TEXT NOT NULL, `staff` TEXT NOT NULL, `open` TEXT NOT NULL, `close` TEXT NOT NULL, `slot` INTEGER NOT NULL, `msg` TEXT NOT NULL, `lastBackup` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "shop",
+            "columnName": "shop",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tagline",
+            "columnName": "tagline",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "adminPinHash",
+            "columnName": "adminPinHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "logoPath",
+            "columnName": "logoPath",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "bgPath",
+            "columnName": "bgPath",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "wa",
+            "columnName": "wa",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "upi",
+            "columnName": "upi",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "staff",
+            "columnName": "staff",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "open",
+            "columnName": "open",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "close",
+            "columnName": "close",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slot",
+            "columnName": "slot",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "msg",
+            "columnName": "msg",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastBackup",
+            "columnName": "lastBackup",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "services",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `rate` INTEGER NOT NULL, `imagePath` TEXT, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rate",
+            "columnName": "rate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imagePath",
+            "columnName": "imagePath",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sortOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "appointments",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `phone` TEXT NOT NULL, `svc` TEXT NOT NULL, `serviceIds` TEXT NOT NULL, `rate` INTEGER NOT NULL, `paid` INTEGER NOT NULL, `staff` TEXT NOT NULL, `date` TEXT NOT NULL, `time` TEXT NOT NULL, `note` TEXT NOT NULL, `status` TEXT NOT NULL, `reminded` TEXT, `bookedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "phone",
+            "columnName": "phone",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "svc",
+            "columnName": "svc",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "serviceIds",
+            "columnName": "serviceIds",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rate",
+            "columnName": "rate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "paid",
+            "columnName": "paid",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "staff",
+            "columnName": "staff",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "time",
+            "columnName": "time",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reminded",
+            "columnName": "reminded",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "bookedAt",
+            "columnName": "bookedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_appointments_date",
+            "unique": false,
+            "columnNames": [
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_appointments_date` ON `${TABLE_NAME}` (`date`)"
+          },
+          {
+            "name": "index_appointments_phone",
+            "unique": false,
+            "columnNames": [
+              "phone"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_appointments_phone` ON `${TABLE_NAME}` (`phone`)"
+          },
+          {
+            "name": "index_appointments_date_time",
+            "unique": false,
+            "columnNames": [
+              "date",
+              "time"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_appointments_date_time` ON `${TABLE_NAME}` (`date`, `time`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "client_notes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`phone` TEXT NOT NULL, `note` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`phone`))",
+        "fields": [
+          {
+            "fieldPath": "phone",
+            "columnName": "phone",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "phone"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "payments",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `appointmentId` TEXT NOT NULL, `amount` INTEGER NOT NULL, `mode` TEXT NOT NULL, `paidAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appointmentId",
+            "columnName": "appointmentId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amount",
+            "columnName": "amount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mode",
+            "columnName": "mode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "paidAt",
+            "columnName": "paidAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_payments_appointmentId",
+            "unique": false,
+            "columnNames": [
+              "appointmentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_payments_appointmentId` ON `${TABLE_NAME}` (`appointmentId`)"
+          }
+        ],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f4eae7366014497a2dd7f30ba4fd199a')"
+    ]
+  }
+}

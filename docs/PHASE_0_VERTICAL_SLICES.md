@@ -174,32 +174,73 @@ abstract class UniqueMakeoverDatabase : RoomDatabase() {
 ### 11. Internal Contract / Boundary Tests
 * **DAO Boundary Tests:** Test that DAO methods return typed domain-ready entities and emit updates through reactive Kotlin `Flow`.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/database/UniqueMakeoverDatabase.kt
-app/src/main/java/com/uniquemakeover/admin/core/database/Converters.kt
-app/src/main/java/com/uniquemakeover/admin/core/database/DatabaseModule.kt
-app/src/main/java/com/uniquemakeover/admin/core/database/entity/SettingsEntity.kt
-app/src/main/java/com/uniquemakeover/admin/core/database/entity/ServiceEntity.kt
-app/src/main/java/com/uniquemakeover/admin/core/database/entity/AppointmentEntity.kt
-app/src/main/java/com/uniquemakeover/admin/core/database/entity/ClientNoteEntity.kt
-app/src/main/java/com/uniquemakeover/admin/core/database/entity/PaymentEntity.kt
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/SettingsDao.kt
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/ServiceDao.kt
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/ClientNoteDao.kt
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/PaymentDao.kt
-app/src/main/java/com/uniquemakeover/admin/core/di/AppModule.kt
-app/src/main/java/com/uniquemakeover/admin/core/di/DispatcherModule.kt
-app/src/main/java/com/uniquemakeover/admin/core/domain/result/DataResult.kt
-app/src/main/java/com/uniquemakeover/admin/core/common/UiText.kt
-app/src/test/java/com/uniquemakeover/admin/core/database/ConvertersTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/core/database/UniqueMakeoverDatabaseTest.kt
-[MODIFIED]
-app/build.gradle.kts (Add Room, KSP, and Hilt dependencies)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/common/UiText.kt`
+   - **Architectural Role:** Core Presentation / UI Abstraction
+   - **Why Created:** Encapsulates dynamic and string-resource messages without coupling domain/business logic to the Android `Context` framework.
+2. `app/src/main/java/com/uniquemakeover/admin/core/domain/result/DataResult.kt`
+   - **Architectural Role:** Pure Domain Result Model
+   - **Why Created:** Implements a pure Kotlin algebraic data type (`Success`, `Error`) for cross-layer error and payload propagation without throwing uncaught exceptions to UI.
+3. `app/src/main/java/com/uniquemakeover/admin/core/di/DispatcherModule.kt`
+   - **Architectural Role:** Core DI Module
+   - **Why Created:** Binds `@IoDispatcher`, `@DefaultDispatcher`, and `@MainDispatcher` qualifiers to allow deterministic test dispatcher overriding in JVM and instrumentation test suites.
+4. `app/src/main/java/com/uniquemakeover/admin/core/di/AppModule.kt`
+   - **Architectural Role:** Core DI Module
+   - **Why Created:** Provides application-scoped singletons including pre-configured `kotlinx.serialization.json.Json` with leniency and unknown-key tolerance.
+5. `app/src/main/java/com/uniquemakeover/admin/core/database/entity/SettingsEntity.kt`
+   - **Architectural Role:** Data Layer (Room Entity)
+   - **Why Created:** Represents the persistent SQLite schema for parlour settings, operating hours, WhatsApp number, UPI ID, and PIN hash.
+6. `app/src/main/java/com/uniquemakeover/admin/core/database/entity/ServiceEntity.kt`
+   - **Architectural Role:** Data Layer (Room Entity)
+   - **Why Created:** Represents the catalog treatment records (`name`, `rate`, `imagePath`, `sortOrder`) stored in local SQLite.
+7. `app/src/main/java/com/uniquemakeover/admin/core/database/entity/AppointmentEntity.kt`
+   - **Architectural Role:** Data Layer (Room Entity)
+   - **Why Created:** Encapsulates parlour appointment records with performance indices on `date`, `phone`, and composite `(date, time)` for fast conflict lookups.
+8. `app/src/main/java/com/uniquemakeover/admin/core/database/entity/ClientNoteEntity.kt`
+   - **Architectural Role:** Data Layer (Room Entity)
+   - **Why Created:** Persists private treatment preferences and allergy notes mapped directly to client phone numbers.
+9. `app/src/main/java/com/uniquemakeover/admin/core/database/entity/PaymentEntity.kt`
+   - **Architectural Role:** Data Layer (Room Entity)
+   - **Why Created:** Stores transaction records (`amount`, `mode`, `paidAt`) linked to parent appointments via an indexed foreign reference.
+10. `app/src/main/java/com/uniquemakeover/admin/core/database/Converters.kt`
+    - **Architectural Role:** Data Layer (Room TypeConverter)
+    - **Why Created:** Marshals/unmarshals `List<String>` service IDs to and from JSON arrays in SQLite without third-party reflection.
+11. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/SettingsDao.kt`
+    - **Architectural Role:** Data Layer (Room DAO)
+    - **Why Created:** Provides reactive Flow and synchronous queries for salon metadata, operating hours, and security parameters.
+12. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/ServiceDao.kt`
+    - **Architectural Role:** Data Layer (Room DAO)
+    - **Why Created:** Exposes reactive Flow and CRUD access to salon catalog treatments ordered by `sortOrder ASC, name ASC`.
+13. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+    - **Architectural Role:** Data Layer (Room DAO)
+    - **Why Created:** Executes appointment scheduling operations including the indexed sub-15ms clash detection query.
+14. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/ClientNoteDao.kt`
+    - **Architectural Role:** Data Layer (Room DAO)
+    - **Why Created:** Provides atomic upsert and lookup for customer profile notes.
+15. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/PaymentDao.kt`
+    - **Architectural Role:** Data Layer (Room DAO)
+    - **Why Created:** Provides payment recording and total revenue sum queries per appointment.
+16. `app/src/main/java/com/uniquemakeover/admin/core/database/UniqueMakeoverDatabase.kt`
+    - **Architectural Role:** Data Layer (Room Database)
+    - **Why Created:** Root SQLite Room database coordinating entities, DAOs, type converters, and schema versioning.
+17. `app/src/main/java/com/uniquemakeover/admin/core/database/DatabaseModule.kt`
+    - **Architectural Role:** Data Layer (Hilt DI Module)
+    - **Why Created:** Injects the SQLite database instance configured with `WRITE_AHEAD_LOGGING` and `PRAGMA foreign_keys = ON;`, and exposes all DAOs.
+18. `app/src/test/java/com/uniquemakeover/admin/core/database/ConvertersTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Verifies null, empty, malformed, and valid JSON array transformations for Room TypeConverters.
+19. `app/src/test/java/com/uniquemakeover/admin/core/database/UniqueMakeoverDatabaseTest.kt`
+    - **Architectural Role:** Automated JVM / Robolectric Integration Test
+    - **Why Created:** Validates in-memory Room instantiation, index existence in SQLite master, DAO CRUD, clash logic, and multi-threaded concurrency.
+20. `app/schemas/com.uniquemakeover.admin.core.database.UniqueMakeoverDatabase/1.json`
+    - **Architectural Role:** Room Schema Artifact
+    - **Why Created:** Version 1 SQLite schema artifact emitted by KSP for migration validation.
+
+#### Files Modified:
+1. `detekt.yml`
+   - **Why Modified:** Configured `thresholdInInterfaces: 20` and `functionPattern` for Compose compatibility.
 
 ---
 
