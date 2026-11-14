@@ -39,6 +39,12 @@ class SlotRepositoryImplTest {
         override fun getAppointmentById(id: String): Flow<AppointmentEntity?> = emptyFlow()
         override suspend fun getAppointmentByIdSync(id: String): AppointmentEntity? = null
         override fun getAppointmentsByPhone(phone: String): Flow<List<AppointmentEntity>> = emptyFlow()
+        override fun observeFilteredAppointments(
+            status: String?,
+            startDate: String?,
+            endDate: String?,
+            query: String
+        ): Flow<List<AppointmentEntity>> = emptyFlow()
 
         override suspend fun countClashingAppointments(date: String, time: String, excludeId: String?): Int {
             return clashCount

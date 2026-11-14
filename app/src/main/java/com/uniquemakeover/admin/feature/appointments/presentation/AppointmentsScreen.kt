@@ -1,26 +1,28 @@
 package com.uniquemakeover.admin.feature.appointments.presentation
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -38,17 +40,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.uniquemakeover.admin.core.domain.model.Slot
-import com.uniquemakeover.admin.core.ui.theme.BlushSurface
+import com.uniquemakeover.admin.core.ui.theme.BorderLine
 import com.uniquemakeover.admin.core.ui.theme.BrandPrimary
-import com.uniquemakeover.admin.core.ui.theme.LuxuryGold
-import com.uniquemakeover.admin.core.ui.theme.SurfaceCard
 import com.uniquemakeover.admin.core.ui.theme.TextMuted
 import com.uniquemakeover.admin.core.ui.theme.TextPrimary
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
+import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
 import com.uniquemakeover.admin.feature.appointments.presentation.booking.BookingSheet
 import com.uniquemakeover.admin.feature.appointments.presentation.booking.BookingViewModel
-import com.uniquemakeover.admin.feature.appointments.presentation.booking.components.SlotGrid
+import com.uniquemakeover.admin.feature.appointments.presentation.components.AppointmentCard
+import com.uniquemakeover.admin.feature.appointments.presentation.components.EmptyAppointmentsView
+import com.uniquemakeover.admin.feature.appointments.presentation.components.FilterTabs
+
+private const val SEARCH_CORNER_RADIUS_DP = 12
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,14 +65,22 @@ fun AppointmentsRoute(
     val bookingUiState by bookingViewModel.uiState.collectAsStateWithLifecycle()
     var isBookingOpen by remember { mutableStateOf(false) }
 
+    val actions = remember(viewModel, bookingViewModel) {
+        AppointmentsActions(
+            onTabSelected = viewModel::updateTab,
+            onSearchQueryChange = viewModel::updateSearchQuery,
+            onDateRangeSelected = viewModel::updateDateRange,
+            onClearFilters = viewModel::clearFilters,
+            onOpenBooking = {
+                bookingViewModel.loadInitialData()
+                isBookingOpen = true
+            }
+        )
+    }
+
     AppointmentsScreen(
         uiState = uiState,
-        onSelectSlot = viewModel::selectSlot,
-        onSelectDate = viewModel::selectDate,
-        onOpenBooking = {
-            bookingViewModel.loadInitialData()
-            isBookingOpen = true
-        },
+        actions = actions,
         modifier = modifier
     )
 
@@ -76,10 +88,7 @@ fun AppointmentsRoute(
         BookingSheet(
             uiState = bookingUiState,
             viewModel = bookingViewModel,
-            onDismiss = {
-                isBookingOpen = false
-                viewModel.selectDate(uiState.selectedDate)
-            }
+            onDismiss = { isBookingOpen = false }
         )
     }
 }
@@ -87,18 +96,29 @@ fun AppointmentsRoute(
 @Composable
 fun AppointmentsScreen(
     uiState: AppointmentsUiState,
-    onSelectSlot: (Slot) -> Unit,
-    onSelectDate: (String) -> Unit,
-    onOpenBooking: () -> Unit = {},
+    actions: AppointmentsActions = AppointmentsActions(),
     modifier: Modifier = Modifier
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = WarmBackground,
-        topBar = { AppointmentsTopBar() },
+        topBar = {
+            Column {
+                AppointmentsTopBar()
+                AppointmentsTopSearchBar(
+                    query = uiState.filter.searchQuery,
+                    onQueryChange = actions.onSearchQueryChange
+                )
+                FilterTabs(
+                    selectedTab = uiState.filter.tab,
+                    tabCounts = uiState.tabCounts,
+                    onTabSelected = actions.onTabSelected
+                )
+            }
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = onOpenBooking,
+                onClick = actions.onOpenBooking,
                 containerColor = BrandPrimary,
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -106,62 +126,31 @@ fun AppointmentsScreen(
             )
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            DateSelectorHeader(
-                selectedDate = uiState.selectedDate,
-                onSelectDate = onSelectDate
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            SlotListSection(
-                isLoading = uiState.isLoading,
-                slots = uiState.slots,
-                selectedSlot = uiState.selectedSlot,
-                onSelectSlot = onSelectSlot,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun SlotListSection(
-    isLoading: Boolean,
-    slots: List<Slot>,
-    selectedSlot: Slot?,
-    onSelectSlot: (Slot) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier) {
-        Text(
-            text = "Available Appointment Slots",
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = TextPrimary
-        )
-        Text(
-            text = "Dynamic conflict-free slots calculated from operating hours",
-            style = MaterialTheme.typography.bodySmall,
-            color = TextMuted
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = LuxuryGold)
+            when {
+                uiState.isLoading && uiState.appointments.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = BrandPrimary)
+                    }
+                }
+                uiState.appointments.isEmpty() -> {
+                    EmptyAppointmentsView(
+                        onClearFilters = actions.onClearFilters,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                else -> {
+                    AppointmentsList(
+                        appointments = uiState.appointments,
+                        onAppointmentClick = actions.onAppointmentClick,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
-        } else {
-            SlotGrid(
-                slots = slots,
-                selectedSlot = selectedSlot,
-                onSlotSelected = onSelectSlot
-            )
         }
     }
 }
@@ -171,51 +160,92 @@ private fun SlotListSection(
 private fun AppointmentsTopBar() {
     TopAppBar(
         title = {
-            Text(
-                text = "Appointments",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Bold
-                ),
-                color = Color.White
-            )
+            Column {
+                Text(
+                    text = "Appointments",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontFamily = FontFamily.Serif,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = BrandPrimary
+                )
+                Text(
+                    text = "Browse, filter & search schedules",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextMuted
+                )
+            }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = BrandPrimary
-        )
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = WarmBackground)
     )
 }
 
 @Composable
-private fun DateSelectorHeader(
-    selectedDate: String,
-    onSelectDate: (String) -> Unit
+private fun AppointmentsTopSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceCard, RoundedCornerShape(12.dp))
-            .padding(12.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "Select Schedule Date",
-            style = MaterialTheme.typography.labelMedium,
-            color = TextMuted
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = { Text("Search client name or mobile...", color = TextMuted) },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = "Search",
+                    tint = BrandPrimary
+                )
+            },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Clear search",
+                            tint = TextMuted
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = BrandPrimary,
+                unfocusedBorderColor = BorderLine,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary
+            ),
+            shape = RoundedCornerShape(SEARCH_CORNER_RADIUS_DP.dp),
+            modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterChip(
-                selected = true,
-                onClick = { onSelectDate(selectedDate) },
-                label = { Text(text = selectedDate.ifEmpty { "Today" }) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = BlushSurface,
-                    selectedLabelColor = BrandPrimary
-                ),
-                border = BorderStroke(1.dp, BrandPrimary)
+    }
+}
+
+@Composable
+private fun AppointmentsList(
+    appointments: List<Appointment>,
+    onAppointmentClick: (Appointment) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        items(
+            items = appointments,
+            key = { it.id }
+        ) { appointment ->
+            AppointmentCard(
+                appointment = appointment,
+                onClick = onAppointmentClick
             )
         }
     }

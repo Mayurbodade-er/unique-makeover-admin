@@ -8,6 +8,12 @@ interface AppointmentRepository {
     fun getAllAppointments(): Flow<List<Appointment>>
     fun getAppointmentsByDate(date: String): Flow<List<Appointment>>
     suspend fun getAppointmentsByDateSync(date: String): List<Appointment>
+    fun getFilteredAppointments(
+        status: String?,
+        startDate: String?,
+        endDate: String?,
+        query: String
+    ): Flow<List<Appointment>>
     suspend fun insertAppointment(appointment: Appointment): DataResult<Unit>
     suspend fun updateAppointment(appointment: Appointment): DataResult<Unit>
     suspend fun deleteAppointment(appointment: Appointment): DataResult<Unit>

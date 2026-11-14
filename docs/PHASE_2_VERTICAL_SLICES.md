@@ -125,23 +125,57 @@ data class AppointmentsUiState(
 ### 11. Internal Contract / Boundary Tests
 * **`AppointmentDaoFilterTest.kt` (In-Memory Room):** Tests SQL query across 100 seeded records validating status tabs, date ranges, and substring name/phone matches.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/model/AppointmentFilter.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/GetAppointmentsUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/list/AppointmentsScreen.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/list/AppointmentsViewModel.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/list/AppointmentsUiState.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/list/components/FilterTabs.kt
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/list/components/AppointmentCard.kt
-app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/GetAppointmentsUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/list/AppointmentsViewModelTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/appointments/data/AppointmentDaoFilterTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt (Adds observeFilteredAppointments)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/model/AppointmentFilter.kt`
+   - **Architectural Role:** Domain Model (Filter State)
+   - **Why Created:** Encapsulates appointment status tabs (`ALL`, `UPCOMING`, `COMPLETED`, `CANCELLED`), optional `DateRange`, and text `searchQuery` independent of database or UI implementations.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/GetAppointmentsUseCase.kt`
+   - **Architectural Role:** Pure Domain UseCase
+   - **Why Created:** Translates `AppointmentFilter` tab selections into database query parameters (mapping `UPCOMING` to `status = "booked", startDate = today`), sanitizes phone queries via `PhoneSanitizer`, and streams reactive appointment lists.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentsActions.kt`
+   - **Architectural Role:** Presentation (Action Contract)
+   - **Why Created:** Bundles UI callback event handlers (tab selection, query typing, filter clearing, booking opening, appointment tapping) to keep composable function signatures clean and maintainable.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/components/FilterTabs.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Renders luxury horizontal scrollable status tabs adhering to `desing.md` with active burgundy indicators, selected text styles, and live count badge pills.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/components/AppointmentCard.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Formats and displays individual appointment records with scheduled datetime, staff stylist chip, client name, formatted phone, frozen service snapshot, monetary totals, and color-coded status badges.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/components/EmptyAppointmentsView.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Renders friendly zero-state illustration and clear message when filters yield no matches, featuring a tactile "Clear Filters" CTA.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/GetAppointmentsUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies filter tab mappings, custom date ranges, and phone number sanitization behavior with 100% deterministic assertions.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/AppointmentDaoFilterTest.kt`
+   - **Architectural Role:** Automated JVM / Robolectric Integration Test
+   - **Why Created:** Validates SQLite query execution across status filters, date windows, substring search across name/phone, and verifies sub-50ms execution speed.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Added indexed `observeFilteredAppointments` query supporting multi-column filters and name/phone substring matching with safe Room parameter binding.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/domain/repository/AppointmentRepository.kt`
+   - **Why Modified:** Declared `getFilteredAppointments` reactive Flow contract.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/data/repository/AppointmentRepositoryImpl.kt`
+   - **Why Modified:** Implemented `getFilteredAppointments` delegating to `AppointmentDao.observeFilteredAppointments` on `@IoDispatcher`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentsUiState.kt`
+   - **Why Modified:** Extended UI state with `appointments`, active `filter`, and live `tabCounts` while preserving slot selection fields for seamless compatibility.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentsViewModel.kt`
+   - **Why Modified:** Integrated `GetAppointmentsUseCase`, implemented reactive tab counts observation, debounced filter updates, and filter reset logic.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentsScreen.kt`
+   - **Why Modified:** Upgraded Screen #3 to the full Appointments Directory with search top bar, filter tabs, card list, empty state, and modal booking sheet integration.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentsScreenTest.kt`
+   - **Why Modified:** Updated UI test suite to verify top search bar, tab filtering, appointment card details, and empty state CTA interactions.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentsViewModelTest.kt`
+   - **Why Modified:** Added comprehensive unit tests for tab transitions, search query updates, custom date ranges, and filter reset.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/repository/AppointmentRepositoryImplTest.kt`
+   - **Why Modified:** Added `observeFilteredAppointments` to test fake DAO.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/data/repository/SlotRepositoryImplTest.kt`
+    - **Why Modified:** Added `observeFilteredAppointments` to test fake DAO.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingViewModelTest.kt`
+    - **Why Modified:** Added `getFilteredAppointments` to test fake repository.
 
 ---
 

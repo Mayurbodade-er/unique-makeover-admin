@@ -37,6 +37,22 @@ class AppointmentRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getFilteredAppointments(
+        status: String?,
+        startDate: String?,
+        endDate: String?,
+        query: String
+    ): Flow<List<Appointment>> {
+        return appointmentDao.observeFilteredAppointments(
+            status = status,
+            startDate = startDate,
+            endDate = endDate,
+            query = query
+        ).map { entities ->
+            entities.map(AppointmentMapper::toDomain)
+        }
+    }
+
     override suspend fun insertAppointment(appointment: Appointment): DataResult<Unit> {
         return withContext(ioDispatcher) {
             try {

@@ -94,6 +94,26 @@ class AppointmentRepositoryImplTest {
         override fun getAppointmentsByPhone(phone: String): Flow<List<AppointmentEntity>> =
             flowOf(storedEntities.filter { it.phone == phone })
 
+        override fun observeFilteredAppointments(
+            status: String?,
+            startDate: String?,
+            endDate: String?,
+            query: String
+        ): Flow<List<AppointmentEntity>> {
+            return flowOf(
+                storedEntities.filter { entity ->
+                    val statusMatch = status == null || entity.status == status ||
+                        (status == "cancel" && entity.status.lowercase() == "cancelled")
+                    val startMatch = startDate == null || entity.date >= startDate
+                    val endMatch = endDate == null || entity.date <= endDate
+                    val queryMatch = query.isBlank() ||
+                        entity.name.contains(query, ignoreCase = true) ||
+                        entity.phone.contains(query, ignoreCase = true)
+                    statusMatch && startMatch && endMatch && queryMatch
+                }
+            )
+        }
+
         override suspend fun countClashingAppointments(date: String, time: String, excludeId: String?): Int = 0
 
         override suspend fun insert(appointment: AppointmentEntity) {

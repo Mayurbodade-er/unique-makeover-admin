@@ -32,6 +32,23 @@ interface AppointmentDao {
 
     @Query(
         """
+        SELECT * FROM appointments 
+        WHERE (:status IS NULL OR status = :status OR (:status = 'cancel' AND LOWER(status) = 'cancelled'))
+          AND (:startDate IS NULL OR date >= :startDate)
+          AND (:endDate IS NULL OR date <= :endDate)
+          AND (:query = '' OR name LIKE '%' || :query || '%' OR phone LIKE '%' || :query || '%')
+        ORDER BY date ASC, time ASC
+        """
+    )
+    fun observeFilteredAppointments(
+        status: String?,
+        startDate: String?,
+        endDate: String?,
+        query: String
+    ): Flow<List<AppointmentEntity>>
+
+    @Query(
+        """
         SELECT COUNT(*) FROM appointments 
         WHERE date = :date 
           AND time = :time 

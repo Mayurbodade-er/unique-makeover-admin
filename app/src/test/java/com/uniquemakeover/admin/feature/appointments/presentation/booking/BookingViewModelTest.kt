@@ -162,6 +162,12 @@ class BookingViewModelTest {
         override fun getAllAppointments(): Flow<List<Appointment>> = flowOf(insertedAppointments)
         override fun getAppointmentsByDate(date: String): Flow<List<Appointment>> = emptyFlow()
         override suspend fun getAppointmentsByDateSync(date: String): List<Appointment> = emptyList()
+        override fun getFilteredAppointments(
+            status: String?,
+            startDate: String?,
+            endDate: String?,
+            query: String
+        ): Flow<List<Appointment>> = flowOf(insertedAppointments)
         override suspend fun insertAppointment(appointment: Appointment): DataResult<Unit> {
             insertedAppointments.add(appointment)
             return DataResult.Success(Unit)
