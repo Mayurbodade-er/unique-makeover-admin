@@ -9,9 +9,12 @@ import com.uniquemakeover.admin.core.domain.repository.ServiceRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
 import com.uniquemakeover.admin.feature.appointments.domain.repository.AppointmentRepository
+import com.uniquemakeover.admin.feature.services.domain.repository.ImageStorageRepository
 import com.uniquemakeover.admin.feature.services.domain.usecase.AddServiceUseCase
+import com.uniquemakeover.admin.feature.services.domain.usecase.CompressAndStoreImageUseCase
 import com.uniquemakeover.admin.feature.services.domain.usecase.DeleteServiceUseCase
 import com.uniquemakeover.admin.feature.services.domain.usecase.GetServicesUseCase
+import com.uniquemakeover.admin.feature.services.domain.usecase.ResetServicePhotoUseCase
 import com.uniquemakeover.admin.feature.services.domain.usecase.ServiceOperations
 import com.uniquemakeover.admin.feature.services.domain.usecase.UpdateServiceUseCase
 import com.uniquemakeover.admin.testutil.FakeTimeProvider
@@ -41,6 +44,7 @@ class ServicesViewModelTest {
 
     private lateinit var fakeServiceRepository: FakeServiceRepository
     private lateinit var fakeAppointmentRepository: FakeAppointmentRepository
+    private lateinit var fakeImageStorageRepository: FakeImageStorageRepository
     private lateinit var fakeTimeProvider: FakeTimeProvider
     private lateinit var serviceOperations: ServiceOperations
     private lateinit var getServicesUseCase: GetServicesUseCase
@@ -50,6 +54,7 @@ class ServicesViewModelTest {
     fun setUp() {
         fakeServiceRepository = FakeServiceRepository()
         fakeAppointmentRepository = FakeAppointmentRepository()
+        fakeImageStorageRepository = FakeImageStorageRepository()
         fakeTimeProvider = FakeTimeProvider()
         fakeTimeProvider.currentDate = "2026-11-20"
 
@@ -57,7 +62,9 @@ class ServicesViewModelTest {
         serviceOperations = ServiceOperations(
             add = AddServiceUseCase(fakeServiceRepository),
             update = UpdateServiceUseCase(fakeServiceRepository),
-            delete = DeleteServiceUseCase(fakeServiceRepository)
+            delete = DeleteServiceUseCase(fakeServiceRepository),
+            compressAndStoreImage = CompressAndStoreImageUseCase(fakeImageStorageRepository),
+            resetPhoto = ResetServicePhotoUseCase(fakeImageStorageRepository)
         )
 
         fakeServiceRepository.setServices(
@@ -94,6 +101,7 @@ class ServicesViewModelTest {
         assertNull(state.editingService)
         assertEquals("", state.editorName)
         assertEquals("", state.editorRate)
+        assertNull(state.editorImagePath)
         assertNull(state.editorError)
         assertFalse(state.isEditMode)
     }
@@ -107,6 +115,31 @@ class ServicesViewModelTest {
         assertEquals("Gold Facial", state.editorName)
         assertEquals("800", state.editorRate)
         assertTrue(state.isEditMode)
+    }
+
+    @Test
+    fun onPhotoSelected_compressesAndUpdatesEditorImagePath() = runTest {
+        viewModel.openAddSheet()
+        viewModel.onPhotoSelected("content://media/external/images/1")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("images/sample_photo.jpg", state.editorImagePath)
+        assertNull(state.editorError)
+    }
+
+    @Test
+    fun onPhotoRemoved_resetsEditorImagePath() = runTest {
+        viewModel.openAddSheet()
+        viewModel.onPhotoSelected("content://media/external/images/1")
+        advanceUntilIdle()
+
+        viewModel.onPhotoRemoved()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.editorImagePath)
+        assertEquals(listOf("images/sample_photo.jpg"), fakeImageStorageRepository.deletedPaths)
     }
 
     @Test
@@ -199,6 +232,21 @@ class ServicesViewModelTest {
         val msg = ((effects[0] as ServicesUiEffect.ShowMessage).message as UiText.DynamicString).value
         assertEquals("Deleted 'Haircut'", msg)
         assertNull(fakeServiceRepository.storedServices.find { it.id == "s1" })
+    }
+
+    private class FakeImageStorageRepository : ImageStorageRepository {
+        val deletedPaths = mutableListOf<String>()
+
+        override suspend fun saveServiceImage(sourceUriString: String): DataResult<String> {
+            return DataResult.Success("images/sample_photo.jpg")
+        }
+
+        override suspend fun deleteImage(relativePath: String): Boolean {
+            deletedPaths.add(relativePath)
+            return true
+        }
+
+        override fun getAbsoluteImagePath(relativePath: String): String = "/data/user/0/$relativePath"
     }
 
     private class FakeServiceRepository : ServiceRepository {

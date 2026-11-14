@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,6 +53,7 @@ import com.uniquemakeover.admin.core.ui.theme.TextMuted
 import com.uniquemakeover.admin.core.ui.theme.TextPrimary
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
 import com.uniquemakeover.admin.feature.services.presentation.components.ServiceCard
+import kotlinx.coroutines.launch
 
 private const val EXPANDED_SCREEN_WIDTH_DP = 840
 private const val MEDIUM_SCREEN_WIDTH_DP = 600
@@ -86,12 +88,23 @@ fun ServicesRoute(
         modifier = modifier
     )
 
+    val scope = rememberCoroutineScope()
+
     if (uiState.isEditorOpen) {
         ServiceEditorSheet(
             uiState = uiState,
             actions = ServiceEditorActions(
                 onNameChange = viewModel::onNameChange,
                 onRateChange = viewModel::onRateChange,
+                onPhotoSelected = viewModel::onPhotoSelected,
+                onPhotoRemoved = viewModel::onPhotoRemoved,
+                onPermissionDenied = {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            "Camera permission is needed to take photos. You can still select photos from Gallery"
+                        )
+                    }
+                },
                 onSave = viewModel::saveService,
                 onDelete = viewModel::requestDelete,
                 onDismiss = viewModel::closeEditor
@@ -99,25 +112,40 @@ fun ServicesRoute(
         )
     }
 
-    uiState.deleteTarget?.let { target ->
-        val message = if (uiState.upcomingCountForDelete > 0) {
-            "This service is scheduled in ${uiState.upcomingCountForDelete} upcoming " +
-                "appointment(s). Existing bookings will retain this service, but it will be " +
-                "unavailable for new bookings. Proceed?"
-        } else {
-            "Are you sure you want to delete '${target.name}'? This action cannot be undone."
-        }
-        ConfirmDialog(
-            config = ConfirmDialogConfig(
-                title = "Delete Service?",
-                message = message,
-                confirmText = "Delete",
-                dismissText = "Cancel"
-            ),
-            onConfirm = viewModel::confirmDelete,
-            onDismiss = viewModel::dismissDelete
-        )
+    ServiceDeleteConfirmationDialog(
+        target = uiState.deleteTarget,
+        upcomingCount = uiState.upcomingCountForDelete,
+        onConfirm = viewModel::confirmDelete,
+        onDismiss = viewModel::dismissDelete
+    )
+}
+
+@Composable
+private fun ServiceDeleteConfirmationDialog(
+    target: Service?,
+    upcomingCount: Int,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    if (target == null) return
+
+    val message = if (upcomingCount > 0) {
+        "This service is scheduled in $upcomingCount upcoming " +
+            "appointment(s). Existing bookings will retain this service, but it will be " +
+            "unavailable for new bookings. Proceed?"
+    } else {
+        "Are you sure you want to delete '${target.name}'? This action cannot be undone."
     }
+    ConfirmDialog(
+        config = ConfirmDialogConfig(
+            title = "Delete Service?",
+            message = message,
+            confirmText = "Delete",
+            dismissText = "Cancel"
+        ),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
+    )
 }
 
 @Composable

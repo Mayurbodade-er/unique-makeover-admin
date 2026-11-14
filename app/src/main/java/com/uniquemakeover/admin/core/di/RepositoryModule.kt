@@ -10,7 +10,9 @@ import com.uniquemakeover.admin.feature.appointments.domain.repository.Appointme
 import com.uniquemakeover.admin.feature.appointments.domain.repository.SlotRepository
 import com.uniquemakeover.admin.feature.auth.data.PinRepositoryImpl
 import com.uniquemakeover.admin.feature.auth.domain.repository.PinRepository
+import com.uniquemakeover.admin.feature.services.data.image.LocalImageStore
 import com.uniquemakeover.admin.feature.services.data.repository.ServiceRepositoryImpl
+import com.uniquemakeover.admin.feature.services.domain.repository.ImageStorageRepository
 import com.uniquemakeover.admin.feature.settings.data.repository.SettingsRepositoryImpl
 import dagger.Binds
 import dagger.Module
@@ -21,6 +23,12 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
+
+    @Binds
+    @Singleton
+    abstract fun bindImageStorageRepository(
+        localImageStore: LocalImageStore
+    ): ImageStorageRepository
 
     @Binds
     @Singleton

@@ -50,6 +50,7 @@ import com.uniquemakeover.admin.core.ui.theme.LuxuryGold
 import com.uniquemakeover.admin.core.ui.theme.SurfaceCard
 import com.uniquemakeover.admin.core.ui.theme.TextMuted
 import com.uniquemakeover.admin.core.ui.theme.TextPrimary
+import com.uniquemakeover.admin.feature.services.presentation.components.PhotoPickerField
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +79,12 @@ fun ServiceEditorSheet(
                 onDelete = actions.onDelete
             )
             Spacer(modifier = Modifier.height(16.dp))
-            ServicePhotoPlaceholder()
+            PhotoPickerField(
+                imagePath = uiState.editorImagePath,
+                onPhotoSelected = actions.onPhotoSelected,
+                onPhotoRemoved = actions.onPhotoRemoved,
+                onPermissionDenied = actions.onPermissionDenied
+            )
             Spacer(modifier = Modifier.height(20.dp))
             ServiceInputFields(
                 name = uiState.editorName,
@@ -136,23 +142,6 @@ private fun ServiceEditorHeader(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ServicePhotoPlaceholder() {
-    Box(
-        modifier = Modifier
-            .size(96.dp)
-            .background(BlushSurface, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.PhotoCamera,
-            contentDescription = "Service Photo",
-            tint = BrandPrimary,
-            modifier = Modifier.size(40.dp)
-        )
     }
 }
 

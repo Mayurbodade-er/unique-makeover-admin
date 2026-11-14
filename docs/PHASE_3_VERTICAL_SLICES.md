@@ -309,23 +309,66 @@ class CompressAndStoreImageUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`ImageSourceLauncherContractTest.kt`:** Verifies system `PickVisualMedia` and `TakePicture` contract contracts configure correct MIME types (`image/*`).
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/util/ImageCompressor.kt
-app/src/main/java/com/uniquemakeover/admin/core/util/ImageCompressorImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/data/image/LocalImageStore.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/CompressAndStoreImageUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/components/PhotoPickerField.kt
-app/src/test/java/com/uniquemakeover/admin/core/util/ImageCompressorTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/services/domain/usecase/CompressAndStoreImageUseCaseTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/services/data/LocalImageStoreIntegrationTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/services/presentation/PhotoPickerFieldTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/di/AppModule.kt (Binds ImageCompressor implementation)
-app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServiceEditorSheet.kt (Integrates PhotoPickerField)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/util/ImageCompressor.kt`
+   - **Architectural Role:** Core Utility Contract
+   - **Why Created:** Defines platform utility interface for local media compression (service photos to 320 px 78% JPEG, logos, wallpapers) without leaking Android specifics into domain layer.
+2. `app/src/main/java/com/uniquemakeover/admin/core/util/ImageCompressorImpl.kt`
+   - **Architectural Role:** Core Utility Implementation
+   - **Why Created:** Implements memory-safe sub-sampling (`inSampleSize` power of 2) downscaling to 320 px longest edge at 78% JPEG quality to guarantee file sizes `< 50 KB` per ADR-0004.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/services/domain/repository/ImageStorageRepository.kt`
+   - **Architectural Role:** Domain Repository Contract
+   - **Why Created:** Defines pure Kotlin abstraction for saving, deleting, and resolving internal storage image paths without referencing Android `Uri` or `Context`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/CompressAndStoreImageUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Orchestrates taking a selected image URI string, generating internal UUID-based storage path, compressing, and persisting to disk via `ImageStorageRepository`.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/ResetServicePhotoUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Implements AC-SVC-03.3 allowing users to reset custom service photos to default category fallback icons while safely purging orphaned image files from disk.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/services/data/image/LocalImageStore.kt`
+   - **Architectural Role:** Data Storage Implementation
+   - **Why Created:** Implements `ImageStorageRepository` targeting internal sandbox directory (`context.filesDir/images/`), managing File operations, relative paths, and safe IO exception handling.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/components/PhotoPickerField.kt`
+   - **Architectural Role:** Presentation Component
+   - **Why Created:** Renders 120x120 dp photo preview chip with camera badge, modal source chooser sheet (`[📷 Take Photo]`, `[🖼️ Choose from Gallery]`, `[🗑️ Remove Photo]`), and runtime camera permission handling per AC-SVC-03.
+8. `app/src/test/java/com/uniquemakeover/admin/core/util/ImageCompressorTest.kt`
+   - **Architectural Role:** Unit & Robolectric Test
+   - **Why Created:** Verifies downscaling of 4000x3000 test bitmap to $\le 320$ px longest edge and $< 50$ KB output size per ADR-0004.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/services/domain/usecase/CompressAndStoreImageUseCaseTest.kt`
+   - **Architectural Role:** Domain Unit Test
+   - **Why Created:** Verifies domain usecase delegates to repository and formats relative file paths cleanly.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/services/data/LocalImageStoreIntegrationTest.kt`
+    - **Architectural Role:** Integration Test (Robolectric)
+    - **Why Created:** Tests physical file creation, retrieval, and deletion in app-internal sandbox storage.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/services/presentation/components/PhotoPickerFieldTest.kt`
+    - **Architectural Role:** Compose UI Test (Robolectric)
+    - **Why Created:** Tests UI rendering of photo picker field, modal options, and fallback states.
+
+#### Files Modified:
+1. `app/src/main/res/xml/file_paths.xml`
+   - **Why Modified:** Added `<cache-path name="camera_temp" path="camera/" />` and `<files-path name="internal_images" path="images/" />` for safe FileProvider content exposure.
+2. `app/src/main/java/com/uniquemakeover/admin/core/di/AppModule.kt`
+   - **Why Modified:** Provided `ImageCompressor` singleton binding.
+3. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Bound `ImageStorageRepository` to `LocalImageStore`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/services/domain/usecase/ServiceOperations.kt`
+   - **Why Modified:** Added `compressAndStoreImage` and `resetPhoto` use cases to consolidated service operations facade.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesUiState.kt`
+   - **Why Modified:** Added `editorImagePath: String?` to track currently selected/persisted image in service editor sheet.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServiceEditorActions.kt`
+   - **Why Modified:** Added `onPhotoSelected`, `onPhotoRemoved`, and `onPermissionDenied` action lambdas.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServiceEditorSheet.kt`
+   - **Why Modified:** Replaced placeholder icon with `PhotoPickerField`.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesViewModel.kt`
+   - **Why Modified:** Implemented photo acquisition, storage, removal, and error handling in editor workflow.
+9. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/ServicesScreen.kt`
+   - **Why Modified:** Wired photo actions to ViewModel and extracted `ServiceDeleteConfirmationDialog` to keep route clean.
+10. `app/src/main/java/com/uniquemakeover/admin/feature/services/presentation/components/ServiceCard.kt`
+    - **Why Modified:** Updated `AsyncImage` to load image files from `File(context.filesDir, imagePath)` for relative paths.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/services/presentation/ServicesViewModelTest.kt`
+    - **Why Modified:** Added unit tests verifying photo selection and removal in ViewModel state.
 
 ---
 

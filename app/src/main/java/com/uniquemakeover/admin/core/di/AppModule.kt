@@ -1,6 +1,8 @@
 package com.uniquemakeover.admin.core.di
 
 import com.uniquemakeover.admin.core.util.DefaultTimeProvider
+import com.uniquemakeover.admin.core.util.ImageCompressor
+import com.uniquemakeover.admin.core.util.ImageCompressorImpl
 import com.uniquemakeover.admin.core.util.TimeProvider
 import dagger.Module
 import dagger.Provides
@@ -27,4 +29,8 @@ object AppModule {
     @Provides
     @Singleton
     fun provideTimeProvider(defaultTimeProvider: DefaultTimeProvider): TimeProvider = defaultTimeProvider
+
+    @Provides
+    @Singleton
+    fun provideImageCompressor(imageCompressorImpl: ImageCompressorImpl): ImageCompressor = imageCompressorImpl
 }

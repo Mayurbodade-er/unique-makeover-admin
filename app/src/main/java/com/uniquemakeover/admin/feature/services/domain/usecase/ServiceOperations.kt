@@ -5,5 +5,7 @@ import javax.inject.Inject
 data class ServiceOperations @Inject constructor(
     val add: AddServiceUseCase,
     val update: UpdateServiceUseCase,
-    val delete: DeleteServiceUseCase
+    val delete: DeleteServiceUseCase,
+    val compressAndStoreImage: CompressAndStoreImageUseCase,
+    val resetPhoto: ResetServicePhotoUseCase
 )

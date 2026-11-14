@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="shared_qr" path="qr_share/" />
+    <cache-path name="camera_temp" path="camera/" />
+    <files-path name="internal_images" path="images/" />
 </paths>

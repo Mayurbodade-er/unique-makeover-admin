@@ -32,7 +32,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
+import java.io.File
 import com.uniquemakeover.admin.core.domain.model.Service
 import com.uniquemakeover.admin.core.ui.theme.BlushSurface
 import com.uniquemakeover.admin.core.ui.theme.BorderLine
@@ -108,8 +110,10 @@ private fun ServiceImageHeader(
         contentAlignment = Alignment.Center
     ) {
         if (!imagePath.isNullOrBlank()) {
+            val context = LocalContext.current
+            val imageFile = File(context.filesDir, imagePath)
             AsyncImage(
-                model = imagePath,
+                model = imageFile,
                 contentDescription = name,
                 modifier = Modifier.matchParentSize(),
                 contentScale = ContentScale.Crop

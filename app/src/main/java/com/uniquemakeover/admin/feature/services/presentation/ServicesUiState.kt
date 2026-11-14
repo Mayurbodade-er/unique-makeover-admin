@@ -11,6 +11,7 @@ data class ServicesUiState(
     val editingService: Service? = null,
     val editorName: String = "",
     val editorRate: String = "",
+    val editorImagePath: String? = null,
     val editorError: UiText? = null,
     val isSaving: Boolean = false,
     val deleteTarget: Service? = null,

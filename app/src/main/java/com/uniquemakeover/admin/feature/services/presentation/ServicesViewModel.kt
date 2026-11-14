@@ -60,6 +60,7 @@ class ServicesViewModel @Inject constructor(
                 editingService = null,
                 editorName = "",
                 editorRate = "",
+                editorImagePath = null,
                 editorError = null
             )
         }
@@ -73,6 +74,7 @@ class ServicesViewModel @Inject constructor(
                 editingService = service,
                 editorName = service.name,
                 editorRate = service.rate.toString(),
+                editorImagePath = service.imagePath,
                 editorError = null
             )
         }
@@ -83,6 +85,7 @@ class ServicesViewModel @Inject constructor(
             it.copy(
                 isEditorOpen = false,
                 editingService = null,
+                editorImagePath = null,
                 editorError = null
             )
         }
@@ -97,6 +100,27 @@ class ServicesViewModel @Inject constructor(
         _uiState.update { it.copy(editorRate = filtered, editorError = null) }
     }
 
+    fun onPhotoSelected(uriString: String) {
+        viewModelScope.launch {
+            when (val result = serviceOperations.compressAndStoreImage(uriString)) {
+                is DataResult.Success -> {
+                    _uiState.update { it.copy(editorImagePath = result.data, editorError = null) }
+                }
+                is DataResult.Error -> {
+                    _uiState.update { it.copy(editorError = result.message) }
+                }
+            }
+        }
+    }
+
+    fun onPhotoRemoved() {
+        val currentPhoto = _uiState.value.editorImagePath
+        viewModelScope.launch {
+            serviceOperations.resetPhoto(currentPhoto)
+            _uiState.update { it.copy(editorImagePath = null) }
+        }
+    }
+
     fun saveService() {
         val state = _uiState.value
         val rateInt = state.editorRate.toIntOrNull() ?: 0
@@ -106,13 +130,15 @@ class ServicesViewModel @Inject constructor(
             val result = if (state.isEditMode) {
                 val updated = state.editingService!!.copy(
                     name = state.editorName,
-                    rate = rateInt
+                    rate = rateInt,
+                    imagePath = state.editorImagePath
                 )
                 serviceOperations.update(updated)
             } else {
                 val draft = ServiceDraft(
                     name = state.editorName,
-                    rate = rateInt
+                    rate = rateInt,
+                    imagePath = state.editorImagePath
                 )
                 serviceOperations.add(draft)
             }
