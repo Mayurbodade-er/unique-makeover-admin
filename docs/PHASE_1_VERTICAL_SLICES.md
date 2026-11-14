@@ -122,26 +122,52 @@ class UpdateOperationsUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`SettingsDaoTest.kt`:** Verifies singleton row update in Room SQLite; verifies that updating `open`/`close` does not overwrite branding or PIN fields.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/domain/model/OperationsConfig.kt
-app/src/main/java/com/uniquemakeover/admin/core/domain/model/Settings.kt
-app/src/main/java/com/uniquemakeover/admin/core/domain/repository/SettingsRepository.kt
-app/src/main/java/com/uniquemakeover/admin/core/util/SlotTimeCalculator.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/data/mapper/SettingsMapper.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/data/repository/SettingsRepositoryImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/GetOperationsConfigUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateOperationsUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/OperationsSection.kt
-app/src/main/java/com/uniquemakeover/admin/core/ui/components/TimePickerField.kt
-app/src/test/java/com/uniquemakeover/admin/core/util/SlotTimeCalculatorTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateOperationsUseCaseTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/settings/data/SettingsDaoTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/DatabaseModule.kt (Binds SettingsRepository)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/domain/model/OperationsConfig.kt`
+   - **Architectural Role:** Pure Domain Model
+   - **Why Created:** Encapsulates parlour operating parameters (`openTime`, `closeTime`, `slotDurationMinutes`, `staffList`) independent of frameworks.
+2. `app/src/main/java/com/uniquemakeover/admin/core/domain/model/Settings.kt`
+   - **Architectural Role:** Pure Domain Model
+   - **Why Created:** Full domain model representing salon metadata, credentials marker, operating hours, and communication configurations.
+3. `app/src/main/java/com/uniquemakeover/admin/core/domain/repository/SettingsRepository.kt`
+   - **Architectural Role:** Pure Domain Repository Interface
+   - **Why Created:** Defines the repository contract for retrieving and persisting settings and operational timing configurations.
+4. `app/src/main/java/com/uniquemakeover/admin/core/util/SlotTimeCalculator.kt`
+   - **Architectural Role:** Core Utility
+   - **Why Created:** Provides deterministic conversions between 24-hour time strings (`"10:00"`), minutes from midnight (`600`), and 12-hour AM/PM representations (`"10:00 AM"`).
+5. `app/src/main/java/com/uniquemakeover/admin/feature/settings/data/mapper/SettingsMapper.kt`
+   - **Architectural Role:** Data Layer (Mapper)
+   - **Why Created:** Bidirectionally converts between Room `SettingsEntity` and domain models `Settings` and `OperationsConfig`.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/settings/data/repository/SettingsRepositoryImpl.kt`
+   - **Architectural Role:** Data Layer (Repository Implementation)
+   - **Why Created:** Bridges `SettingsDao` with `SettingsRepository` using `@IoDispatcher`, handling default entity creation and preserving PIN/branding on operations updates.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/GetOperationsConfigUseCase.kt`
+   - **Architectural Role:** Pure Domain UseCase
+   - **Why Created:** Single-responsibility use case that retrieves current operating parameters for slot generation and settings forms.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateOperationsUseCase.kt`
+   - **Architectural Role:** Pure Domain UseCase
+   - **Why Created:** Validates timing rules (`closeTime > openTime`, `slotDuration > 0`, operating window $\ge$ slot duration) and sanitizes/deduplicates staff inputs before persistence.
+9. `app/src/main/java/com/uniquemakeover/admin/core/ui/components/TimePickerField.kt`
+   - **Architectural Role:** Core Presentation Component
+   - **Why Created:** Material 3 dialog and input field for selecting and formatting operating times in 12-hour AM/PM format adhering to `desing.md`.
+10. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/OperationsSection.kt`
+    - **Architectural Role:** Presentation (Compose Component)
+    - **Why Created:** Interactive operations configuration form featuring time pickers, segmented slot duration chips (15/30/45/60 min), and dynamic staff roster management.
+11. `app/src/test/java/com/uniquemakeover/admin/core/util/SlotTimeCalculatorTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Validates minute calculation, formatting, and edge bounds (midnight, noon, 24h clock conversions).
+12. `app/src/test/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateOperationsUseCaseTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Tests validation boundaries (`close <= open`, `slot <= 0`, window too small) and staff sanitization.
+13. `app/src/test/java/com/uniquemakeover/admin/feature/settings/data/SettingsDaoTest.kt`
+    - **Architectural Role:** Automated JVM / Robolectric Test
+    - **Why Created:** Verifies singleton row updates and ensures PIN hash and branding fields are preserved.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Bound `SettingsRepositoryImpl` to `SettingsRepository`.
 
 ---
 
