@@ -505,33 +505,72 @@ data class PinLockUiState(
 ### 11. Internal Contract / Boundary Tests
 * **Auth Guard Navigation Contract Test:** Verifies that attempting to deep-link directly to `Routes.Dashboard` without passing `VerifyPinUseCase` redirects back to `Routes.PinLock`.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/security/PinHasher.kt
-app/src/main/java/com/uniquemakeover/admin/core/security/PinLockManager.kt
-app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/model/PinResult.kt
-app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/repository/PinRepository.kt
-app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/usecase/VerifyPinUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/auth/data/PinRepositoryImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockScreen.kt
-app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockViewModel.kt
-app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockUiState.kt
-app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/components/PinKeypad.kt
-app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/components/PinDots.kt
-app/src/main/java/com/uniquemakeover/admin/navigation/Routes.kt
-app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt
-app/src/test/java/com/uniquemakeover/admin/core/security/PinHasherTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/auth/domain/usecase/VerifyPinUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockViewModelTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/core/security/PinLockManagerInstrumentedTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockScreenTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHostTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/MainActivity.kt (Set Compose Content to UniqueMakeoverNavHost)
-app/src/main/java/com/uniquemakeover/admin/UniqueMakeoverApp.kt (@HiltAndroidApp initialization)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/security/PinHasher.kt`
+   - **Architectural Role:** Core Security (Cryptographic Utility)
+   - **Why Created:** Implements PBKDF2WithHmacSHA256 password hashing with 100,000 iterations and random salt generation for local admin credentials.
+2. `app/src/main/java/com/uniquemakeover/admin/core/security/PinLockManager.kt`
+   - **Architectural Role:** Core Security (Storage Manager)
+   - **Why Created:** Manages hardware-backed `EncryptedSharedPreferences` with default PIN `1234` initialization and fallback safety against Keystore invalidation.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/model/PinResult.kt`
+   - **Architectural Role:** Pure Domain Model
+   - **Why Created:** Algebraic data type (`Success`, `Invalid`, `Locked`) representing authentication outcomes.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/repository/PinRepository.kt`
+   - **Architectural Role:** Pure Domain Repository Interface
+   - **Why Created:** Defines the contract for PIN verification, default PIN checks, and PIN modification.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/usecase/VerifyPinUseCase.kt`
+   - **Architectural Role:** Pure Domain UseCase
+   - **Why Created:** Validates 4-digit formatting and delegates authentication verification to `PinRepository`.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/auth/data/PinRepositoryImpl.kt`
+   - **Architectural Role:** Data Layer (Repository Implementation)
+   - **Why Created:** Bridges `PinLockManager` with `PinRepository` using `@IoDispatcher`.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockUiState.kt`
+   - **Architectural Role:** Presentation (UI State)
+   - **Why Created:** Models immutable PIN lock screen state (`digitsEntered`, `isError`, `errorMessage`, `shakeTrigger`, `isAuthenticated`).
+8. `app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockViewModel.kt`
+   - **Architectural Role:** Presentation (ViewModel)
+   - **Why Created:** Handles digit inputs, backspace, error clearing, debouncing, and auto-submission on 4th digit.
+9. `app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/components/PinDots.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Renders 4 animated indicator dots with gold active states and horizontal error shake animation adhering to `desing.md`.
+10. `app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/components/PinKeypad.kt`
+    - **Architectural Role:** Presentation (Compose Component)
+    - **Why Created:** Renders tactile 3x4 numeric keypad with haptic touch feedback and minimum 48dp target sizing.
+11. `app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockScreen.kt`
+    - **Architectural Role:** Presentation (Compose Screen)
+    - **Why Created:** Assembles PIN lock gate screen with luxury parlour branding, error shake, and hardware back button exit handler (`AC-AUTH-01.3`).
+12. `app/src/main/java/com/uniquemakeover/admin/navigation/Routes.kt`
+    - **Architectural Role:** Navigation Contract
+    - **Why Created:** Centralizes type-safe route string constants (`PinLock`, `Services`).
+13. `app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt`
+    - **Architectural Role:** Navigation Layer (NavHost)
+    - **Why Created:** Implements the root Jetpack Navigation graph, starting strictly at `PinLock` and transitioning to `Services` upon authentication.
+14. `app/src/test/java/com/uniquemakeover/admin/core/security/PinHasherTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Verifies salt uniqueness, hash computation, and matching/mismatching validation.
+15. `app/src/test/java/com/uniquemakeover/admin/core/security/PinLockManagerTest.kt`
+    - **Architectural Role:** Automated JVM / Robolectric Unit Test
+    - **Why Created:** Verifies default PIN `1234` authentication and preference persistence.
+16. `app/src/test/java/com/uniquemakeover/admin/feature/auth/domain/usecase/VerifyPinUseCaseTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Validates length and numeric constraints before repository delegation.
+17. `app/src/test/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockViewModelTest.kt`
+    - **Architectural Role:** Automated JVM Unit Test
+    - **Why Created:** Verifies digit accumulation, backspace, and authentication state transitions with Turbine.
+18. `app/src/test/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockScreenTest.kt`
+    - **Architectural Role:** Automated Compose UI Test
+    - **Why Created:** Verifies display of branding, digits, and interactive backspace callback.
+19. `app/src/test/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHostTest.kt`
+    - **Architectural Role:** Automated Navigation Architecture Test
+    - **Why Created:** Validates route destinations and target rendering.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/MainActivity.kt`
+   - **Why Modified:** Connected `UniqueMakeoverNavHost` as root Compose content inside `UniqueMakeoverTheme`.
+2. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Bound `PinRepositoryImpl` to `PinRepository`.
 
 ---
 

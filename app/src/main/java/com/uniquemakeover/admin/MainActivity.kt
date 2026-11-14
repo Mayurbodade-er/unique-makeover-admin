@@ -10,6 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import com.uniquemakeover.admin.core.ui.theme.UniqueMakeoverTheme
+import com.uniquemakeover.admin.navigation.UniqueMakeoverNavHost
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -19,12 +20,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             UniqueMakeoverTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Text(text = "Unique Makeover Admin")
-                }
+                UniqueMakeoverNavHost()
             }
         }
     }
