@@ -717,17 +717,26 @@ class BuildRebookDraftUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **Navigation Contract Test:** Verifies navigation arguments pass client phone to booking sheet and pre-loads the draft.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/usecase/BuildRebookDraftUseCase.kt
-app/src/test/java/com/uniquemakeover/admin/feature/clients/domain/usecase/BuildRebookDraftUseCaseTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/components/ClientMetricsHeader.kt (Adds Quick Rebook button)
-app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailScreen.kt (Wires rebook navigation event)
-app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingViewModel.kt (Adds loadRebookDraft)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/clients/domain/usecase/BuildRebookDraftUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Implements the core business logic of building a rebooking draft from a client's last completed appointment; queries active catalog services, filters out orphaned/deleted services, applies current catalog pricing, and pre-populates client name and phone.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingOperations.kt`
+   - **Architectural Role:** Presentation (Injectable Operation Aggregator)
+   - **Why Created:** Groups booking use cases (`BookAppointmentUseCase`, `EditAppointmentUseCase`, `BuildRebookDraftUseCase`) into a single injectable data class to adhere strictly to Detekt's constructor parameter threshold (`constructorThreshold: 7`).
+3. `app/src/test/java/com/uniquemakeover/admin/feature/clients/domain/usecase/BuildRebookDraftUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies parsing and extraction of historical services, active catalog price overrides, filtering of deleted promotional services, and fallback behavior for clients with no completed appointments.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingViewModel.kt`
+   - **Why Modified:** Injected `BookingOperations` and added `loadRebookDraft(phone: String)` to fetch draft data, set today's date, refresh open slots, and pre-fill form fields.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/clients/presentation/detail/ClientDetailScreen.kt`
+   - **Why Modified:** Injected `BookingViewModel`, wired `onQuickRebookClick` action to trigger draft loading and display `BookingSheet` directly over client profile.
+3. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingViewModelTest.kt`
+   - **Why Modified:** Updated test fixtures with `BookingOperations` and added unit test verifying `loadRebookDraft` pre-populates name, phone, and selected services.
 
 ---
 

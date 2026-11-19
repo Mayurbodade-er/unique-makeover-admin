@@ -16,6 +16,7 @@ import com.uniquemakeover.admin.feature.appointments.domain.usecase.BookAppointm
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.EditAppointmentUseCase
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.GenerateAvailableSlotsUseCase
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.ValidateBookingDraftUseCase
+import com.uniquemakeover.admin.feature.clients.domain.usecase.BuildRebookDraftUseCase
 import com.uniquemakeover.admin.feature.services.domain.usecase.GetServicesUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetOperationsConfigUseCase
 import com.uniquemakeover.admin.testutil.FakeTimeProvider
@@ -83,13 +84,21 @@ class BookingViewModelTest {
             fakeSlotRepository,
             fakeTimeProvider
         )
+        val rebookUseCase = BuildRebookDraftUseCase(
+            fakeAppointmentRepository,
+            fakeServiceRepository
+        )
+        val bookingOperations = BookingOperations(
+            bookAppointment = bookUseCase,
+            editAppointment = editUseCase,
+            buildRebookDraft = rebookUseCase
+        )
 
         viewModel = BookingViewModel(
             getServicesUseCase = GetServicesUseCase(fakeServiceRepository),
             getOperationsConfigUseCase = GetOperationsConfigUseCase(fakeSettingsRepository),
             generateAvailableSlotsUseCase = generateSlotsUseCase,
-            bookAppointmentUseCase = bookUseCase,
-            editAppointmentUseCase = editUseCase,
+            bookingOperations = bookingOperations,
             timeProvider = fakeTimeProvider
         )
     }
@@ -259,6 +268,39 @@ class BookingViewModelTest {
         override suspend fun countDuplicateNames(name: String, excludeId: String): Int = 0
     }
 
+    @Test
+    fun loadRebookDraft_prePopulatesClientDetailsAndServices() = runTest {
+        val historicalApt = Appointment(
+            id = "apt_hist_1",
+            name = "Kavita",
+            phone = "9822001122",
+            serviceSnapshot = "Keratin Spa",
+            serviceIds = listOf("s1"),
+            rate = 800,
+            paid = 800,
+            staff = "Sunita",
+            date = "2026-10-10",
+            time = "10:00",
+            note = "",
+            status = "done",
+            reminded = null,
+            bookedAt = 1000L
+        )
+        fakeAppointmentRepository.insertedAppointments.add(historicalApt)
+
+        viewModel.loadRebookDraft("9822001122")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("Kavita", state.draft.name)
+        assertEquals("9822001122", state.draft.phone)
+        assertEquals("2026-11-20", state.draft.date)
+        assertEquals("", state.draft.time)
+        assertEquals(1, state.draft.selectedServices.size)
+        assertEquals("s1", state.draft.selectedServices[0].id)
+        assertEquals(800, state.draft.subtotal)
+    }
+
     private class FakeSettingsRepository : SettingsRepository {
         val config = OperationsConfig("09:00", "19:00", 30, listOf("Sunita", "Pooja"))
         override fun getSettings(): Flow<Settings?> = emptyFlow()
@@ -272,6 +314,8 @@ class BookingViewModelTest {
     private class FakeAppointmentRepository : AppointmentRepository {
         val insertedAppointments = mutableListOf<Appointment>()
         override fun getAllAppointments(): Flow<List<Appointment>> = flowOf(insertedAppointments)
+        override fun getAppointmentsByPhone(phone: String): Flow<List<Appointment>> =
+            flowOf(insertedAppointments.filter { it.phone.endsWith(phone.takeLast(10)) })
         override fun getTodaySchedule(today: String): Flow<List<Appointment>> = emptyFlow()
         override fun getAppointmentsByDate(date: String): Flow<List<Appointment>> = emptyFlow()
         override suspend fun getAppointmentsByDateSync(date: String): List<Appointment> = emptyList()

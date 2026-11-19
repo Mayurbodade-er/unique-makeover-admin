@@ -36,12 +36,15 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uniquemakeover.admin.core.ui.theme.BorderLine
 import com.uniquemakeover.admin.core.ui.theme.BrandDark
@@ -52,27 +55,37 @@ import com.uniquemakeover.admin.core.ui.theme.SurfaceCard
 import com.uniquemakeover.admin.core.ui.theme.TextHeading
 import com.uniquemakeover.admin.core.ui.theme.TextMuted
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
+import com.uniquemakeover.admin.feature.appointments.presentation.booking.BookingSheet
+import com.uniquemakeover.admin.feature.appointments.presentation.booking.BookingViewModel
 import com.uniquemakeover.admin.feature.clients.presentation.detail.components.ClientMetricsHeader
 import com.uniquemakeover.admin.feature.clients.presentation.detail.components.HistoryList
 import com.uniquemakeover.admin.feature.clients.presentation.detail.components.NoteEditor
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClientDetailRoute(
     viewModel: ClientDetailViewModel,
+    bookingViewModel: BookingViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
-    onQuickRebook: (phone: String) -> Unit = {}
+    onQuickRebook: ((phone: String) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val bookingUiState by bookingViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var isBookingSheetOpen by remember { mutableStateOf(false) }
 
-    val actions = remember(onNavigateBack, onQuickRebook, uiState.phone) {
+    val actions = remember(onNavigateBack, onQuickRebook, uiState.phone, bookingViewModel) {
         ClientDetailActions(
             onNavigateBack = onNavigateBack,
             onTabSelected = viewModel::onTabSelected,
             onCallClick = { launchCallIntent(context, uiState.phone) },
             onWhatsAppClick = { launchWhatsAppIntent(context, uiState.phone) },
-            onQuickRebookClick = { onQuickRebook(uiState.phone) },
+            onQuickRebookClick = {
+                bookingViewModel.loadRebookDraft(uiState.phone)
+                isBookingSheetOpen = true
+                onQuickRebook?.invoke(uiState.phone)
+            },
             onNoteChange = viewModel::onNoteChange,
             onFlushNote = viewModel::flushPendingNote
         )
@@ -89,6 +102,14 @@ fun ClientDetailRoute(
         actions = actions,
         modifier = modifier
     )
+
+    if (isBookingSheetOpen) {
+        BookingSheet(
+            uiState = bookingUiState,
+            viewModel = bookingViewModel,
+            onDismiss = { isBookingSheetOpen = false }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

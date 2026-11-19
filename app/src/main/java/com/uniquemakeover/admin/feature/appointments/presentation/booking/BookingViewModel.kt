@@ -27,8 +27,7 @@ class BookingViewModel @Inject constructor(
     private val getServicesUseCase: GetServicesUseCase,
     private val getOperationsConfigUseCase: GetOperationsConfigUseCase,
     private val generateAvailableSlotsUseCase: GenerateAvailableSlotsUseCase,
-    private val bookAppointmentUseCase: BookAppointmentUseCase,
-    private val editAppointmentUseCase: EditAppointmentUseCase,
+    private val bookingOperations: BookingOperations,
     private val timeProvider: TimeProvider
 ) : ViewModel() {
 
@@ -72,10 +71,59 @@ class BookingViewModel @Inject constructor(
         }
     }
 
+    fun loadRebookDraft(phone: String) {
+        val today = timeProvider.todayDate()
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                editingAppointmentId = null,
+                isDateTimeLocked = false,
+                bookingSuccess = false,
+                generalError = null,
+                nameError = null,
+                phoneError = null,
+                serviceError = null,
+                slotError = null,
+                financialError = null,
+                draft = BookingDraft(date = today, phone = phone)
+            )
+        }
+        viewModelScope.launch {
+            val services = getServicesUseCase().first()
+            val config = getOperationsConfigUseCase()
+            val slots = generateAvailableSlotsUseCase(today)
+            val result = bookingOperations.buildRebookDraft(phone)
+
+            val initialDraft = if (result is DataResult.Success) {
+                result.data.copy(
+                    date = today,
+                    time = "",
+                    staff = config.staffList.firstOrNull() ?: "Sunita"
+                )
+            } else {
+                BookingDraft(
+                    phone = phone,
+                    date = today,
+                    staff = config.staffList.firstOrNull() ?: "Sunita"
+                )
+            }
+
+            _uiState.update { state ->
+                state.copy(
+                    isLoading = false,
+                    availableServices = services,
+                    staffList = config.staffList,
+                    availableSlots = slots,
+                    draft = initialDraft
+                )
+            }
+        }
+    }
+
     fun loadAppointmentForEdit(appointmentId: String) {
         _uiState.update { it.copy(isLoading = true, editingAppointmentId = appointmentId) }
         viewModelScope.launch {
-            val appointment = editAppointmentUseCase.getAppointment(appointmentId)
+            val appointment = bookingOperations.editAppointment.getAppointment(appointmentId)
             if (appointment == null) {
                 _uiState.update { it.copy(isLoading = false, generalError = "Appointment not found") }
                 return@launch
@@ -209,9 +257,9 @@ class BookingViewModel @Inject constructor(
 
     private suspend fun performSave(editId: String?, draft: BookingDraft): String? {
         val result = if (editId != null) {
-            editAppointmentUseCase(editId, draft)
+            bookingOperations.editAppointment(editId, draft)
         } else {
-            when (val bookRes = bookAppointmentUseCase(draft)) {
+            when (val bookRes = bookingOperations.bookAppointment(draft)) {
                 is DataResult.Success -> DataResult.Success(Unit)
                 is DataResult.Error -> DataResult.Error(bookRes.message)
             }
