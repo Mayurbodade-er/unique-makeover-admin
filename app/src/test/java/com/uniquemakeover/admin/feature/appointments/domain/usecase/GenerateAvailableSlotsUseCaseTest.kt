@@ -119,6 +119,30 @@ class GenerateAvailableSlotsUseCaseTest {
         assertFalse(slots.any { it.time24 == "20:00" })
     }
 
+    @Test
+    fun invoke_withExistingSlotOutsideOperatingHours_preservesExistingSlotInChronologicalOrder() = runTest {
+        // Operating hours are 11:00 to 14:00 (e.g. after owner shifted opening time from 10:00 to 11:00)
+        fakeSettingsRepository.config = OperationsConfig(
+            openTime = "11:00",
+            closeTime = "14:00",
+            slotDurationMinutes = 30,
+            staffList = listOf("Sunita")
+        )
+
+        // Existing appointment was booked at 10:00
+        val slots = useCase("2026-11-21", existingSlotTime = "10:00")
+
+        // First slot should be the preserved 10:00 slot, available for this edit
+        assertEquals("10:00", slots[0].time24)
+        assertEquals("10:00 AM", slots[0].time12)
+        assertTrue(slots[0].isAvailable)
+        assertNull(slots[0].reason)
+
+        // Followed by standard operating slots
+        assertEquals("11:00", slots[1].time24)
+        assertEquals(7, slots.size) // 1 extra preserved slot + 6 standard slots
+    }
+
     private class FakeSettingsRepository : SettingsRepository {
         var config = OperationsConfig(
             openTime = "10:00",

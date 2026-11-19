@@ -46,11 +46,11 @@ Allow the salon owner to export the entire parlour database to an external SD ca
 * **AC-DAT-01.1 (Standardized File Creation via SAF):**
   * **Given** today is 2026-11-14,
   * **When** the owner taps [Export Backup],
-  * **Then** the Android system file creator (`CreateDocument`) opens suggesting filename `UniqueMakeover_backup_2026-11-14.json`.
-* **AC-DAT-01.2 (Complete Schema v2 JSON Data Capture):**
-  * **Given** an active database containing 50 appointments, 10 services, and 15 client notes,
-  * **When** the backup file is written,
-  * **Then** the exported JSON contains all 50 appointments, 10 services, 15 client notes, and salon settings with `"version": 2` metadata header.
+  * **Then** the Android system file creator (`CreateDocument`) opens suggesting filename `UniqueMakeover_backup_2026-11-14.zip` (consolidated archive bundling `database.json` and all local `filesDir/images`).
+* **AC-DAT-01.2 (Complete Schema v2 JSON & Visual Asset Capture):**
+  * **Given** an active database containing 50 appointments, 10 services with reference photos, and 15 client notes,
+  * **When** the backup archive is written,
+  * **Then** the exported archive contains `database.json` with all database tables AND an `images/` directory bundling all compressed service photo JPEGs, ensuring 100% visual asset portability across device restores.
 * **AC-DAT-01.3 (Last Backup Timestamp Update):**
   * **Given** a successful backup export,
   * **Then** `settings.lastBackup` updates to the current ISO-8601 date, and a confirmation snackbar displays *"Backup exported successfully (XX KB)"*.

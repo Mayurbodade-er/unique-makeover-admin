@@ -141,6 +141,10 @@ Render an instant, high-contrast, standardized UPI QR code directly on the salon
   * **Given** the device screen brightness is at 30%,
   * **When** the UPI QR screen opens,
   * **Then** window brightness temporarily boosts to 100% for scanning ease, and restores to 30% upon exiting the screen.
+* **AC-UPI-01.4 (In-Line Counter Payment QR Bridge):**
+  * **Given** the owner is in `RecordPaymentDialog` collecting balance due at the counter,
+  * **When** selecting `PaymentMode.UPI`,
+  * **Then** a prominent `[📱 Show Payment QR]` button appears; tapping it launches the QR display modal pre-filled with the exact balance due amount and appointment reference without requiring the owner to leave the payment flow.
 
 ### 5. Edge Cases & Technical Resilience
 * **EC-UPI-01.1 (Special Characters in Shop Name or Note):** Salon name contains ampersands or quotes (e.g. `Unique & Chic "Makeover"`). All query parameters pass through strict RFC 3986 percent-encoding (`Uri.encode()`), preventing banking apps from rejecting the URI.

@@ -355,6 +355,10 @@ Deliver the operational apex of client communication: tapping a single button fo
   * **Given** the Undo snackbar is visible on screen,
   * **When** the owner taps "Undo",
   * **Then** `AppointmentEntity.reminded` resets to `null` in SQLite, and the row reverts to "Not Sent".
+* **AC-REM-02.4 (Manual Reset to Unsent via Context Action):**
+  * **Given** an appointment has been marked as "Reminded ✓" (e.g. after the 5s snackbar has dismissed),
+  * **When** the owner opens the row action menu and taps [Mark as Not Sent],
+  * **Then** `AppointmentEntity.reminded` is reset to `null` via `UndoMarkRemindedUseCase`, immediately returning the row to the unsent queue state.
 
 ### 5. Edge Cases & Technical Resilience
 * **EC-REM-02.1 (WhatsApp Not Installed on Device):**

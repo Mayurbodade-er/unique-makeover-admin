@@ -138,7 +138,11 @@ class BookingViewModel @Inject constructor(
     ) {
         val services = getServicesUseCase().first()
         val config = getOperationsConfigUseCase()
-        val slots = generateAvailableSlotsUseCase(appointment.date, excludeAppointmentId = appointmentId)
+        val slots = generateAvailableSlotsUseCase(
+            selectedDate = appointment.date,
+            excludeAppointmentId = appointmentId,
+            existingSlotTime = appointment.time
+        )
         val selected = resolveSelectedServices(services, appointment)
         val subtotal = selected.sumOf { it.rate }
         val discount = (subtotal - appointment.rate).coerceAtLeast(0)

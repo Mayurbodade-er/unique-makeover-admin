@@ -39,7 +39,7 @@ fun UniqueMakeoverNavHost(
         onNavigate = { targetRoute ->
             if (currentRoute != targetRoute) {
                 navController.navigate(targetRoute) {
-                    popUpTo(Routes.Services) {
+                    popUpTo(Routes.Dashboard) {
                         saveState = true
                     }
                     launchSingleTop = true
@@ -72,7 +72,7 @@ private fun UniqueMakeoverNavGraph(
             PinLockRoute(
                 viewModel = hiltViewModel(),
                 onAuthenticated = {
-                    navController.navigate(Routes.Services) {
+                    navController.navigate(Routes.Dashboard) {
                         popUpTo(Routes.PinLock) { inclusive = true }
                     }
                 }

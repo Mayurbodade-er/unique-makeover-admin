@@ -281,6 +281,10 @@ Protect sensitive client beauty consultation notes, contact records, and parlour
   * **Given** the app is locked with 20 seconds remaining,
   * **When** the app process is terminated and reopened after 5 seconds,
   * **Then** the PIN screen remains locked with approximately 15 seconds remaining.
+* **AC-AUTH-02.4 (Offline Master Security Recovery Gate):**
+  * **Given** the owner has forgotten her custom PIN and is locked out,
+  * **When** tapping the secondary action [Forgot PIN / Master Reset],
+  * **Then** an offline security challenge prompts for the owner's pre-configured security answer (salted SHA-256 in Keystore); answering correctly resets the failed count and restores access with default PIN (`1234`), eliminating risk of permanent lockout.
 
 ### 5. Edge Cases & Technical Resilience
 * **EC-AUTH-02.1 (System Wall-Clock Tampering):**

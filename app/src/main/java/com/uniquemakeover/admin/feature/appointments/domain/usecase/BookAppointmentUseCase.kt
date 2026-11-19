@@ -1,6 +1,9 @@
 package com.uniquemakeover.admin.feature.appointments.domain.usecase
 
 import com.uniquemakeover.admin.core.common.UiText
+import com.uniquemakeover.admin.core.domain.model.Payment
+import com.uniquemakeover.admin.core.domain.model.PaymentMode
+import com.uniquemakeover.admin.core.domain.repository.PaymentRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.core.util.PhoneSanitizer
 import com.uniquemakeover.admin.core.util.TimeProvider
@@ -15,6 +18,7 @@ import javax.inject.Inject
 class BookAppointmentUseCase @Inject constructor(
     private val validateBookingDraftUseCase: ValidateBookingDraftUseCase,
     private val appointmentRepository: AppointmentRepository,
+    private val paymentRepository: PaymentRepository,
     private val slotRepository: SlotRepository,
     private val phoneSanitizer: PhoneSanitizer,
     private val timeProvider: TimeProvider
@@ -64,8 +68,27 @@ class BookAppointmentUseCase @Inject constructor(
         )
 
         return when (val insertResult = appointmentRepository.insertAppointment(appointment)) {
-            is DataResult.Success -> DataResult.Success(appointmentId)
             is DataResult.Error -> DataResult.Error(insertResult.message)
+            is DataResult.Success -> {
+                if (draft.advancePaid > 0) {
+                    val payment = Payment(
+                        id = UUID.randomUUID().toString(),
+                        appointmentId = appointmentId,
+                        amount = draft.advancePaid,
+                        mode = PaymentMode.CASH,
+                        paidAt = appointment.bookedAt
+                    )
+                    when (val paymentResult = paymentRepository.recordPayment(payment)) {
+                        is DataResult.Error -> {
+                            appointmentRepository.deleteAppointment(appointment)
+                            DataResult.Error(paymentResult.message)
+                        }
+                        is DataResult.Success -> DataResult.Success(appointmentId)
+                    }
+                } else {
+                    DataResult.Success(appointmentId)
+                }
+            }
         }
     }
 }

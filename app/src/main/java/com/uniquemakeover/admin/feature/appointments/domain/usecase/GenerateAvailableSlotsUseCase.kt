@@ -15,7 +15,11 @@ class GenerateAvailableSlotsUseCase @Inject constructor(
     private val slotRepository: SlotRepository,
     private val timeProvider: TimeProvider
 ) {
-    suspend operator fun invoke(selectedDate: String, excludeAppointmentId: String? = null): List<Slot> {
+    suspend operator fun invoke(
+        selectedDate: String,
+        excludeAppointmentId: String? = null,
+        existingSlotTime: String? = null
+    ): List<Slot> {
         val config = settingsRepository.getOperationsConfig()
         val openMinutes = SlotTimeCalculator.timeToMinutes(config.openTime)
         val closeMinutes = SlotTimeCalculator.timeToMinutes(config.closeTime)
@@ -39,6 +43,23 @@ class GenerateAvailableSlotsUseCase @Inject constructor(
             )
             current += step
         }
+
+        if (!existingSlotTime.isNullOrBlank() && slots.none { it.time24 == existingSlotTime }) {
+            val existingMinutes = SlotTimeCalculator.timeToMinutes(existingSlotTime)
+            val existingSlot = Slot(
+                time24 = existingSlotTime,
+                time12 = SlotTimeCalculator.format12Hour(existingSlotTime),
+                isAvailable = true,
+                reason = null
+            )
+            val insertIndex = slots.indexOfFirst { SlotTimeCalculator.timeToMinutes(it.time24) > existingMinutes }
+            if (insertIndex >= 0) {
+                slots.add(insertIndex, existingSlot)
+            } else {
+                slots.add(existingSlot)
+            }
+        }
+
         return slots
     }
 

@@ -2,9 +2,11 @@ package com.uniquemakeover.admin.feature.appointments.presentation.booking
 
 import com.uniquemakeover.admin.core.domain.model.AppointmentStatus
 import com.uniquemakeover.admin.core.domain.model.OperationsConfig
+import com.uniquemakeover.admin.core.domain.model.Payment
 import com.uniquemakeover.admin.core.domain.model.Service
 import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.model.Slot
+import com.uniquemakeover.admin.core.domain.repository.PaymentRepository
 import com.uniquemakeover.admin.core.domain.repository.ServiceRepository
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
@@ -63,12 +65,14 @@ class BookingViewModelTest {
         fakeServiceRepository = FakeServiceRepository(listOf(service1, service2))
         fakeSettingsRepository = FakeSettingsRepository()
         fakeAppointmentRepository = FakeAppointmentRepository()
+        val fakePaymentRepository = FakePaymentRepository()
         fakeSlotRepository = FakeSlotRepository()
         phoneSanitizer = PhoneSanitizer()
         validateUseCase = ValidateBookingDraftUseCase(phoneSanitizer)
         bookUseCase = BookAppointmentUseCase(
             validateUseCase,
             fakeAppointmentRepository,
+            fakePaymentRepository,
             fakeSlotRepository,
             phoneSanitizer,
             fakeTimeProvider
@@ -350,5 +354,13 @@ class BookingViewModelTest {
     private class FakeSlotRepository : SlotRepository {
         override suspend fun isClashFree(date: String, time: String, excludeId: String?): Boolean = true
         override suspend fun getAvailableSlots(date: String): List<Slot> = emptyList()
+    }
+
+    private class FakePaymentRepository : PaymentRepository {
+        override fun getPaymentsForAppointment(appointmentId: String): Flow<List<Payment>> = emptyFlow()
+        override suspend fun getPaymentsForAppointmentSync(appointmentId: String): List<Payment> = emptyList()
+        override suspend fun recordPayment(payment: Payment): DataResult<Unit> = DataResult.Success(Unit)
+        override suspend fun deletePaymentsByAppointmentId(appointmentId: String): DataResult<Unit> =
+            DataResult.Success(Unit)
     }
 }
