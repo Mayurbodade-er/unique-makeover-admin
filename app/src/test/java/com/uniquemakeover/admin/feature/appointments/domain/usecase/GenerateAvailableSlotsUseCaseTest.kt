@@ -1,5 +1,6 @@
 package com.uniquemakeover.admin.feature.appointments.domain.usecase
 
+import com.uniquemakeover.admin.core.domain.model.CommunicationConfig
 import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.model.Slot
@@ -157,6 +158,10 @@ class GenerateAvailableSlotsUseCaseTest {
         override suspend fun updateOperationsConfig(newConfig: OperationsConfig): DataResult<Unit> =
             DataResult.Success(Unit)
         override suspend fun updateSettings(settings: Settings): DataResult<Unit> =
+            DataResult.Success(Unit)
+        override suspend fun getCommunicationConfig(): CommunicationConfig =
+            CommunicationConfig("", "")
+        override suspend fun updateCommunicationConfig(config: CommunicationConfig): DataResult<Unit> =
             DataResult.Success(Unit)
     }
 

@@ -99,20 +99,44 @@ class UpdateCommunicationUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`UpiValidatorTest.kt`:** Tests NPCI-compliant UPI handle regex patterns across major Indian PSP handles (`@upi`, `@okaxis`, `@okhdfcbank`, `@paytm`, `@ybl`).
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/domain/model/CommunicationConfig.kt
-app/src/main/java/com/uniquemakeover/admin/core/util/UpiValidator.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateCommunicationUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/CommunicationSection.kt
-app/src/test/java/com/uniquemakeover/admin/core/util/UpiValidatorTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateCommunicationUseCaseTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/domain/repository/SettingsRepository.kt (Adds updateCommunicationConfig)
-app/src/main/java/com/uniquemakeover/admin/feature/settings/data/repository/SettingsRepositoryImpl.kt (Implements updateCommunicationConfig)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/core/domain/model/CommunicationConfig.kt`
+   - **Architectural Role:** Domain Model (Core/Settings)
+   - **Why Created:** Pure Kotlin data class encapsulating salon communication configuration (`whatsappNumber`, `merchantUpiId`) independent of database entities or UI components.
+2. `app/src/main/java/com/uniquemakeover/admin/core/util/UpiValidator.kt`
+   - **Architectural Role:** Core Utility / Domain Validator
+   - **Why Created:** Pure Kotlin regular expression validator enforcing NPCI-compliant Virtual Payment Address (VPA) structure (`username@bankHandle`) with zero Android dependencies.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/GetCommunicationConfigUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Single-responsibility use case that retrieves the persisted communication configuration (`wa`, `upi`) from `SettingsRepository`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateCommunicationUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Single-responsibility use case that coordinates Indian 10-digit mobile phone sanitization via `PhoneSanitizer` and merchant UPI handle format validation via `UpiValidator`, persisting validated values via `SettingsRepository`.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/CommunicationSection.kt`
+   - **Architectural Role:** Presentation (Compose UI Component)
+   - **Why Created:** Composable form section in the Settings screen providing luxury-themed input fields for WhatsApp phone number (+91 prefix) and merchant UPI address with inline validation error displays and >=48dp touch targets adhering to `desing.md`.
+6. `app/src/test/java/com/uniquemakeover/admin/core/util/UpiValidatorTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies standard NPCI UPI handle formats across major Indian payment providers (`@upi`, `@okhdfcbank`, `@paytm`, `@ybl`) and rejects invalid patterns.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateCommunicationUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Validates business rules of `UpdateCommunicationUseCase`: phone number sanitization, invalid UPI rejection, and successful persistence through repository.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/domain/repository/SettingsRepository.kt`
+   - **Why Modified:** Added repository interface contracts `suspend fun getCommunicationConfig(): CommunicationConfig` and `suspend fun updateCommunicationConfig(config: CommunicationConfig): DataResult<Unit>`.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/settings/data/repository/SettingsRepositoryImpl.kt`
+   - **Why Modified:** Implemented reading and writing `wa` and `upi` columns in SQLite singleton `settings` table via `SettingsDao` on `@IoDispatcher`.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsUiState.kt`
+   - **Why Modified:** Extended `SettingsUiState` with `communicationConfig: CommunicationConfig` and `commsErrorMessage: String?`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsViewModel.kt`
+   - **Why Modified:** Injected `GetCommunicationConfigUseCase` and `UpdateCommunicationUseCase`; added `saveCommunication(phone, upiId)` event handler updating reactive UI state.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsScreen.kt`
+   - **Why Modified:** Integrated `CommunicationSection` with luxury divider below salon operations in `SettingsContent`.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsViewModelTest.kt`
+   - **Why Modified:** Added ViewModel test cases for loading communication settings and saving valid/invalid communication configs.
 
 ---
 

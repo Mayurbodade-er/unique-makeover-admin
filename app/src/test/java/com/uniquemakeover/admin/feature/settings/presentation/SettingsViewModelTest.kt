@@ -1,10 +1,14 @@
 package com.uniquemakeover.admin.feature.settings.presentation
 
+import com.uniquemakeover.admin.core.domain.model.CommunicationConfig
 import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
+import com.uniquemakeover.admin.core.util.PhoneSanitizer
+import com.uniquemakeover.admin.feature.settings.domain.usecase.GetCommunicationConfigUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetOperationsConfigUseCase
+import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateCommunicationUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateOperationsUseCase
 import com.uniquemakeover.admin.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,16 +30,27 @@ class SettingsViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var fakeRepository: FakeSettingsRepository
+    private lateinit var phoneSanitizer: PhoneSanitizer
     private lateinit var getOperationsConfigUseCase: GetOperationsConfigUseCase
     private lateinit var updateOperationsUseCase: UpdateOperationsUseCase
+    private lateinit var getCommunicationConfigUseCase: GetCommunicationConfigUseCase
+    private lateinit var updateCommunicationUseCase: UpdateCommunicationUseCase
     private lateinit var viewModel: SettingsViewModel
 
     @Before
     fun setUp() {
         fakeRepository = FakeSettingsRepository()
+        phoneSanitizer = PhoneSanitizer()
         getOperationsConfigUseCase = GetOperationsConfigUseCase(fakeRepository)
         updateOperationsUseCase = UpdateOperationsUseCase(fakeRepository)
-        viewModel = SettingsViewModel(getOperationsConfigUseCase, updateOperationsUseCase)
+        getCommunicationConfigUseCase = GetCommunicationConfigUseCase(fakeRepository)
+        updateCommunicationUseCase = UpdateCommunicationUseCase(fakeRepository, phoneSanitizer)
+        viewModel = SettingsViewModel(
+            getOperationsConfigUseCase = getOperationsConfigUseCase,
+            updateOperationsUseCase = updateOperationsUseCase,
+            getCommunicationConfigUseCase = getCommunicationConfigUseCase,
+            updateCommunicationUseCase = updateCommunicationUseCase
+        )
     }
 
     @Test
@@ -46,6 +61,8 @@ class SettingsViewModelTest {
         assertEquals("20:00", state.operationsConfig.closeTime)
         assertEquals(30, state.operationsConfig.slotDurationMinutes)
         assertEquals(listOf("Sunita", "Pooja"), state.operationsConfig.staffList)
+        assertEquals("9822001122", state.communicationConfig.whatsappNumber)
+        assertEquals("uniquemakeover@upi", state.communicationConfig.merchantUpiId)
     }
 
     @Test
@@ -75,6 +92,30 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun saveCommunication_validInput_updatesStateAndSetsSuccessMessage() = runTest {
+        advanceUntilIdle()
+        viewModel.saveCommunication("9890123456", "salon@okaxis")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.commsErrorMessage)
+        assertNotNull(state.successMessage)
+        assertEquals("9890123456", state.communicationConfig.whatsappNumber)
+        assertEquals("salon@okaxis", state.communicationConfig.merchantUpiId)
+    }
+
+    @Test
+    fun saveCommunication_invalidPhone_setsErrorMessage() = runTest {
+        advanceUntilIdle()
+        viewModel.saveCommunication("123", "salon@okaxis")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNotNull(state.commsErrorMessage)
+        assertNull(state.successMessage)
+    }
+
+    @Test
     fun clearMessages_clearsBothSuccessAndError() = runTest {
         advanceUntilIdle()
         viewModel.saveOperations("19:00", "10:00", 30, "Sunita")
@@ -83,6 +124,7 @@ class SettingsViewModelTest {
 
         viewModel.clearMessages()
         assertNull(viewModel.uiState.value.errorMessage)
+        assertNull(viewModel.uiState.value.commsErrorMessage)
         assertNull(viewModel.uiState.value.successMessage)
     }
 
@@ -93,6 +135,10 @@ class SettingsViewModelTest {
             slotDurationMinutes = 30,
             staffList = listOf("Sunita", "Pooja")
         )
+        var commsConfig = CommunicationConfig(
+            whatsappNumber = "9822001122",
+            merchantUpiId = "uniquemakeover@upi"
+        )
 
         override fun getSettings(): Flow<Settings?> = flowOf(null)
         override suspend fun getSettingsSync(): Settings? = null
@@ -102,5 +148,11 @@ class SettingsViewModelTest {
             return DataResult.Success(Unit)
         }
         override suspend fun updateSettings(settings: Settings): DataResult<Unit> = DataResult.Success(Unit)
+
+        override suspend fun getCommunicationConfig(): CommunicationConfig = commsConfig
+        override suspend fun updateCommunicationConfig(config: CommunicationConfig): DataResult<Unit> {
+            commsConfig = config
+            return DataResult.Success(Unit)
+        }
     }
 }

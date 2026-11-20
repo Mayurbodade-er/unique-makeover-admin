@@ -5,6 +5,7 @@ import com.uniquemakeover.admin.core.common.UiText
 import com.uniquemakeover.admin.core.database.dao.SettingsDao
 import com.uniquemakeover.admin.core.database.entity.SettingsEntity
 import com.uniquemakeover.admin.core.di.IoDispatcher
+import com.uniquemakeover.admin.core.domain.model.CommunicationConfig
 import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
@@ -80,6 +81,35 @@ class SettingsRepositoryImpl @Inject constructor(
             } catch (e: SQLiteException) {
                 DataResult.Error(
                     UiText.DynamicString(e.localizedMessage ?: "Failed to save settings"),
+                    e
+                )
+            }
+        }
+    }
+
+    override suspend fun getCommunicationConfig(): CommunicationConfig {
+        return withContext(ioDispatcher) {
+            val entity = settingsDao.getSettingsSync() ?: createDefaultSettingsEntity()
+            CommunicationConfig(
+                whatsappNumber = entity.wa,
+                merchantUpiId = entity.upi
+            )
+        }
+    }
+
+    override suspend fun updateCommunicationConfig(config: CommunicationConfig): DataResult<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                val current = settingsDao.getSettingsSync() ?: createDefaultSettingsEntity()
+                val updated = current.copy(
+                    wa = config.whatsappNumber,
+                    upi = config.merchantUpiId
+                )
+                settingsDao.upsert(updated)
+                DataResult.Success(Unit)
+            } catch (e: SQLiteException) {
+                DataResult.Error(
+                    UiText.DynamicString(e.localizedMessage ?: "Failed to save communication settings"),
                     e
                 )
             }

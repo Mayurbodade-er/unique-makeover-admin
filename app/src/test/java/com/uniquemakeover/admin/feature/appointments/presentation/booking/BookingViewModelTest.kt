@@ -1,6 +1,7 @@
 package com.uniquemakeover.admin.feature.appointments.presentation.booking
 
 import com.uniquemakeover.admin.core.domain.model.AppointmentStatus
+import com.uniquemakeover.admin.core.domain.model.CommunicationConfig
 import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.domain.model.Payment
 import com.uniquemakeover.admin.core.domain.model.Service
@@ -313,6 +314,10 @@ class BookingViewModelTest {
         override suspend fun updateOperationsConfig(newConfig: OperationsConfig): DataResult<Unit> =
             DataResult.Success(Unit)
         override suspend fun updateSettings(settings: Settings): DataResult<Unit> = DataResult.Success(Unit)
+        override suspend fun getCommunicationConfig(): CommunicationConfig =
+            CommunicationConfig("", "")
+        override suspend fun updateCommunicationConfig(config: CommunicationConfig): DataResult<Unit> =
+            DataResult.Success(Unit)
     }
 
     private class FakeAppointmentRepository : AppointmentRepository {

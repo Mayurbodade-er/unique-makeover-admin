@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -26,10 +27,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.uniquemakeover.admin.core.ui.theme.BorderLine
 import com.uniquemakeover.admin.core.ui.theme.BrandPrimary
 import com.uniquemakeover.admin.core.ui.theme.LuxuryGold
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
+import com.uniquemakeover.admin.feature.settings.presentation.sections.CommunicationSection
 import com.uniquemakeover.admin.feature.settings.presentation.sections.OperationsSection
 
 @Composable
@@ -41,6 +45,7 @@ fun SettingsRoute(
     SettingsScreen(
         uiState = uiState,
         onSaveOperations = viewModel::saveOperations,
+        onSaveCommunication = viewModel::saveCommunication,
         onClearMessages = viewModel::clearMessages,
         modifier = modifier
     )
@@ -50,6 +55,7 @@ fun SettingsRoute(
 fun SettingsScreen(
     uiState: SettingsUiState,
     onSaveOperations: (String, String, Int, String) -> Unit,
+    onSaveCommunication: (String, String) -> Unit = { _, _ -> },
     onClearMessages: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -81,6 +87,7 @@ fun SettingsScreen(
                 )
             } else {
                 val errorString = uiState.errorMessage?.asString(context)
+                val commsErrorString = uiState.commsErrorMessage?.asString(context)
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -90,6 +97,17 @@ fun SettingsScreen(
                         initialConfig = uiState.operationsConfig,
                         onSaveOperations = onSaveOperations,
                         errorMessage = errorString
+                    )
+
+                    HorizontalDivider(
+                        color = BorderLine,
+                        thickness = 1.dp
+                    )
+
+                    CommunicationSection(
+                        initialConfig = uiState.communicationConfig,
+                        onSaveCommunication = onSaveCommunication,
+                        errorMessage = commsErrorString
                     )
                 }
             }
