@@ -6,5 +6,7 @@ data class UpiUseCases @Inject constructor(
     val buildUpiUri: BuildUpiUriUseCase,
     val generateQrMatrix: GenerateQrMatrixUseCase,
     val computePresetAmount: ComputePresetAmountUseCase,
-    val buildWhatsAppMessage: BuildUpiWhatsAppMessageUseCase
+    val buildWhatsAppMessage: BuildUpiWhatsAppMessageUseCase,
+    val saveQrPng: SaveQrPngUseCase,
+    val shareQr: ShareQrUseCase
 )

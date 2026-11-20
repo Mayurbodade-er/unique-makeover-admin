@@ -101,6 +101,7 @@ class UpiQrViewModel @Inject constructor(
         _uiState.update {
             UpiQrUiState.Content(
                 qrBitmap = qrBitmap,
+                qrMatrix = qrMatrix,
                 upiUri = upiUri,
                 shopName = shopName,
                 upiId = upiId,
@@ -154,6 +155,7 @@ class UpiQrViewModel @Inject constructor(
             _uiState.update {
                 content.copy(
                     qrBitmap = qrBitmap,
+                    qrMatrix = qrMatrix,
                     upiUri = upiUri,
                     amount = newAmount,
                     selectedPreset = preset,
@@ -161,6 +163,34 @@ class UpiQrViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    suspend fun saveToGallery(): DataResult<String> {
+        val content = _uiState.value as? UpiQrUiState.Content
+        val matrix = content?.qrMatrix
+        if (content == null || matrix == null) {
+            return DataResult.Error(UiText.DynamicString("QR Code not available"))
+        }
+        val filename = if (content.amount > 0) {
+            "UPI_QR_${content.amount}"
+        } else {
+            "UPI_QR_UniqueMakeover"
+        }
+        return upiUseCases.saveQrPng(matrix, filename)
+    }
+
+    suspend fun shareQr(): DataResult<Unit> {
+        val content = _uiState.value as? UpiQrUiState.Content
+        val matrix = content?.qrMatrix
+        if (content == null || matrix == null) {
+            return DataResult.Error(UiText.DynamicString("QR Code not available"))
+        }
+        val title = if (content.amount > 0) {
+            "${content.shopName} - Pay ₹${content.amount} via UPI"
+        } else {
+            "${content.shopName} - Scan & Pay UPI QR"
+        }
+        return upiUseCases.shareQr(matrix, title)
     }
 
     fun launchWhatsAppPaymentRequest(): DataResult<Unit> {

@@ -10,11 +10,14 @@ import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.feature.upi.domain.launcher.UpiWhatsAppLauncher
 import com.uniquemakeover.admin.feature.upi.domain.model.PaymentPreset
 import com.uniquemakeover.admin.feature.upi.domain.model.QrCodeMatrix
+import com.uniquemakeover.admin.feature.upi.domain.repository.QrImageExporter
 import com.uniquemakeover.admin.feature.upi.domain.repository.QrRepository
 import com.uniquemakeover.admin.feature.upi.domain.usecase.BuildUpiUriUseCase
 import com.uniquemakeover.admin.feature.upi.domain.usecase.BuildUpiWhatsAppMessageUseCase
 import com.uniquemakeover.admin.feature.upi.domain.usecase.ComputePresetAmountUseCase
 import com.uniquemakeover.admin.feature.upi.domain.usecase.GenerateQrMatrixUseCase
+import com.uniquemakeover.admin.feature.upi.domain.usecase.SaveQrPngUseCase
+import com.uniquemakeover.admin.feature.upi.domain.usecase.ShareQrUseCase
 import com.uniquemakeover.admin.feature.upi.domain.usecase.UpiUseCases
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -53,12 +56,17 @@ class UpiQrViewModelConfigTest {
         val generateQrMatrixUseCase = GenerateQrMatrixUseCase(FakeQrRepository())
         val computePresetAmountUseCase = ComputePresetAmountUseCase()
         val buildWhatsAppMessageUseCase = BuildUpiWhatsAppMessageUseCase(buildUpiUriUseCase)
+        val fakeQrImageExporter = FakeQrImageExporter()
+        val saveQrPngUseCase = SaveQrPngUseCase(fakeQrImageExporter)
+        val shareQrUseCase = ShareQrUseCase(fakeQrImageExporter)
 
         upiUseCases = UpiUseCases(
             buildUpiUri = buildUpiUriUseCase,
             generateQrMatrix = generateQrMatrixUseCase,
             computePresetAmount = computePresetAmountUseCase,
-            buildWhatsAppMessage = buildWhatsAppMessageUseCase
+            buildWhatsAppMessage = buildWhatsAppMessageUseCase,
+            saveQrPng = saveQrPngUseCase,
+            shareQr = shareQrUseCase
         )
     }
 
@@ -228,6 +236,62 @@ class UpiQrViewModelConfigTest {
 
         val result = viewModel.launchWhatsAppPaymentRequest()
         assertTrue(result is DataResult.Error)
+    }
+
+    @Test
+    fun saveToGallery_whenContentReady_savesImageSuccessfully() = runTest {
+        fakeSettingsRepository.emitSettings(
+            Settings(shop = "Unique Salon", upi = "uniquemakeover@okhdfcbank")
+        )
+        val savedStateHandle = SavedStateHandle(mapOf("amount" to 500))
+        val viewModel = createViewModel(savedStateHandle)
+        advanceUntilIdle()
+
+        val result = viewModel.saveToGallery()
+        assertTrue(result is DataResult.Success)
+    }
+
+    @Test
+    fun saveToGallery_whenNotContent_returnsError() = runTest {
+        fakeSettingsRepository.emitSettings(null)
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val result = viewModel.saveToGallery()
+        assertTrue(result is DataResult.Error)
+    }
+
+    @Test
+    fun shareQr_whenContentReady_sharesSuccessfully() = runTest {
+        fakeSettingsRepository.emitSettings(
+            Settings(shop = "Unique Salon", upi = "uniquemakeover@okhdfcbank")
+        )
+        val savedStateHandle = SavedStateHandle(mapOf("amount" to 500))
+        val viewModel = createViewModel(savedStateHandle)
+        advanceUntilIdle()
+
+        val result = viewModel.shareQr()
+        assertTrue(result is DataResult.Success)
+    }
+
+    @Test
+    fun shareQr_whenNotContent_returnsError() = runTest {
+        fakeSettingsRepository.emitSettings(null)
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val result = viewModel.shareQr()
+        assertTrue(result is DataResult.Error)
+    }
+
+    private class FakeQrImageExporter : QrImageExporter {
+        override suspend fun saveToGallery(
+            matrix: QrCodeMatrix,
+            filename: String
+        ): DataResult<String> = DataResult.Success("content://media/external/images/media/1")
+
+        override suspend fun shareQr(matrix: QrCodeMatrix, title: String): DataResult<Unit> =
+            DataResult.Success(Unit)
     }
 
     private class FakeUpiWhatsAppLauncher : UpiWhatsAppLauncher {

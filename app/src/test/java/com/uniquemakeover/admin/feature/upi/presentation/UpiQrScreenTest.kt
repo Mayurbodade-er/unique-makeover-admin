@@ -49,6 +49,8 @@ class UpiQrScreenTest {
         composeTestRule.onNodeWithTag(QR_CANVAS_TEST_TAG).assertIsDisplayed()
         composeTestRule.onNodeWithText("Pooja - Balance Payment").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("Send Payment Link on WhatsApp").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Save to Gallery").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Share QR").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -79,6 +81,66 @@ class UpiQrScreenTest {
             .performScrollTo()
             .performClick()
         assertTrue("WhatsApp button click should invoke action callback", whatsappClicked)
+    }
+
+    @Test
+    fun upiQrScreen_saveToGalleryClick_invokesActionCallback() {
+        val dummyBitmap = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
+        val contentState = UpiQrUiState.Content(
+            qrBitmap = dummyBitmap,
+            upiUri = "upi://pay?pa=uniquemakeover@upi",
+            amount = 850,
+            note = "Pooja",
+            shopName = "Unique Makeover",
+            upiId = "uniquemakeover@upi"
+        )
+        var saveClicked = false
+
+        composeTestRule.setContent {
+            UniqueMakeoverTheme {
+                UpiQrScreen(
+                    uiState = contentState,
+                    actions = UpiQrActions(
+                        onSaveToGalleryClick = { saveClicked = true }
+                    )
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Save to Gallery")
+            .performScrollTo()
+            .performClick()
+        assertTrue("Save to Gallery click should invoke action callback", saveClicked)
+    }
+
+    @Test
+    fun upiQrScreen_shareQrClick_invokesActionCallback() {
+        val dummyBitmap = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
+        val contentState = UpiQrUiState.Content(
+            qrBitmap = dummyBitmap,
+            upiUri = "upi://pay?pa=uniquemakeover@upi",
+            amount = 850,
+            note = "Pooja",
+            shopName = "Unique Makeover",
+            upiId = "uniquemakeover@upi"
+        )
+        var shareClicked = false
+
+        composeTestRule.setContent {
+            UniqueMakeoverTheme {
+                UpiQrScreen(
+                    uiState = contentState,
+                    actions = UpiQrActions(
+                        onShareQrClick = { shareClicked = true }
+                    )
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Share QR")
+            .performScrollTo()
+            .performClick()
+        assertTrue("Share QR click should invoke action callback", shareClicked)
     }
 
     @Test

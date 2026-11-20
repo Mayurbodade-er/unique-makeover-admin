@@ -2,8 +2,11 @@ package com.uniquemakeover.admin.feature.upi.presentation
 
 import android.app.Activity
 import android.view.WindowManager
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -14,13 +17,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -58,12 +65,14 @@ import kotlinx.coroutines.launch
 private val BUTTON_MIN_HEIGHT = 48.dp
 private val BUTTON_CORNER_RADIUS = 12.dp
 
-class UpiQrActions(
+data class UpiQrActions(
     val onNavigateBack: () -> Unit = {},
     val onConfigureUpiClick: () -> Unit = {},
     val onPresetSelect: (PaymentPreset) -> Unit = {},
     val onCustomAmountChange: (String) -> Unit = {},
-    val onSendWhatsAppClick: () -> Unit = {}
+    val onSendWhatsAppClick: () -> Unit = {},
+    val onSaveToGalleryClick: () -> Unit = {},
+    val onShareQrClick: () -> Unit = {}
 )
 
 @Composable
@@ -87,6 +96,28 @@ fun UpiQrRoute(
                 val result = viewModel.launchWhatsAppPaymentRequest()
                 if (result is DataResult.Error) {
                     scope.launch {
+                        snackbarHostState.showSnackbar(result.message.asString(context))
+                    }
+                }
+            },
+            onSaveToGalleryClick = {
+                scope.launch {
+                    when (val result = viewModel.saveToGallery()) {
+                        is DataResult.Success -> {
+                            snackbarHostState.showSnackbar(
+                                "QR Code saved to Gallery (Pictures/UniqueMakeover)"
+                            )
+                        }
+                        is DataResult.Error -> {
+                            snackbarHostState.showSnackbar(result.message.asString(context))
+                        }
+                    }
+                }
+            },
+            onShareQrClick = {
+                scope.launch {
+                    val result = viewModel.shareQr()
+                    if (result is DataResult.Error) {
                         snackbarHostState.showSnackbar(result.message.asString(context))
                     }
                 }
@@ -204,6 +235,67 @@ private fun UpiQrContentColumn(
             onCustomAmountChange = actions.onCustomAmountChange
         )
         WhatsAppDispatchButton(onClick = actions.onSendWhatsAppClick)
+        QrExportActionButtonsRow(
+            onSaveToGalleryClick = actions.onSaveToGalleryClick,
+            onShareQrClick = actions.onShareQrClick
+        )
+    }
+}
+
+@Composable
+private fun QrExportActionButtonsRow(
+    onSaveToGalleryClick: () -> Unit,
+    onShareQrClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        FilledTonalButton(
+            onClick = onSaveToGalleryClick,
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = BUTTON_MIN_HEIGHT),
+            shape = RoundedCornerShape(BUTTON_CORNER_RADIUS),
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = LuxuryGold.copy(alpha = 0.15f),
+                contentColor = BrandPrimary
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.FileDownload,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 6.dp)
+            )
+            Text(
+                text = "Save to Gallery",
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        OutlinedButton(
+            onClick = onShareQrClick,
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = BUTTON_MIN_HEIGHT),
+            shape = RoundedCornerShape(BUTTON_CORNER_RADIUS),
+            border = BorderStroke(1.dp, BrandPrimary.copy(alpha = 0.4f)),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = BrandPrimary
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Share,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 6.dp)
+            )
+            Text(
+                text = "Share QR",
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }
 

@@ -3,6 +3,7 @@ package com.uniquemakeover.admin.feature.upi.presentation
 import android.graphics.Bitmap
 import com.uniquemakeover.admin.core.common.UiText
 import com.uniquemakeover.admin.feature.upi.domain.model.PaymentPreset
+import com.uniquemakeover.admin.feature.upi.domain.model.QrCodeMatrix
 
 sealed interface UpiQrUiState {
     data object Loading : UpiQrUiState
@@ -10,6 +11,7 @@ sealed interface UpiQrUiState {
 
     data class Content(
         val qrBitmap: Bitmap? = null,
+        val qrMatrix: QrCodeMatrix? = null,
         val upiUri: String = "",
         val amount: Int = 0,
         val note: String = "",

@@ -612,25 +612,49 @@ class ShareQrUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **Share Intent Contract Test:** Verifies `intent.action == Intent.ACTION_SEND` and `intent.flags` contains `FLAG_GRANT_READ_URI_PERMISSION`.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/res/xml/file_paths.xml
-app/src/main/java/com/uniquemakeover/admin/feature/upi/data/platform/QrPngExporter.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/data/platform/QrPngExporterImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/data/platform/QrShareIntentBuilder.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/data/platform/QrShareIntentBuilderImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/SaveQrPngUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/ShareQrUseCase.kt
-app/src/test/java/com/uniquemakeover/admin/feature/upi/domain/usecase/SaveQrPngUseCaseTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/upi/data/QrPngExporterInstrumentedTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/upi/data/QrShareFileProviderTest.kt
-[MODIFIED]
-app/src/main/AndroidManifest.xml (Declares FileProvider for qr_share)
-app/src/main/java/com/uniquemakeover/admin/core/di/AppModule.kt (Binds QrPngExporter and QrShareIntentBuilder)
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreen.kt (Integrates Save and Share buttons)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/repository/QrImageExporter.kt`
+   - **Architectural Role:** Domain Repository Interface (`feature/upi/domain/repository`)
+   - **Why Created:** Defines pure domain contracts for gallery export and native system share sheet dispatch using pure `QrCodeMatrix` without importing any Android framework classes (`android.*`).
+2. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/SaveQrPngUseCase.kt`
+   - **Architectural Role:** Domain UseCase (`feature/upi/domain/usecase`)
+   - **Why Created:** Encapsulates the business logic of saving QR code PNG images into device storage with configurable file naming and error handling.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/ShareQrUseCase.kt`
+   - **Architectural Role:** Domain UseCase (`feature/upi/domain/usecase`)
+   - **Why Created:** Encapsulates the business logic of dispatching a QR code image to the Android system share sheet with dynamic title and text context.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/upi/data/mapper/QrBitmapMapper.kt`
+   - **Architectural Role:** Data Mapper (`feature/upi/data/mapper`)
+   - **Why Created:** Maps pure domain `QrCodeMatrix` into an Android `Bitmap` within the data layer without violating Clean Architecture package boundaries (avoids data importing presentation).
+5. `app/src/main/java/com/uniquemakeover/admin/feature/upi/data/platform/QrImageExporterImpl.kt`
+   - **Architectural Role:** Platform Exporter Implementation (`feature/upi/data/platform`)
+   - **Why Created:** Implements `QrImageExporter` using Scoped Storage on Android 10+ (`MediaStore.VOLUME_EXTERNAL_PRIMARY` and `RELATIVE_PATH = "Pictures/UniqueMakeover"`) with legacy fallback for Android 8/9, and caches temporary share images in `cache/qr_share/` for secure `FileProvider` URI generation.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/upi/domain/usecase/SaveQrPngUseCaseTest.kt`
+   - **Architectural Role:** JVM Unit Test (`app/src/test/...`)
+   - **Why Created:** Verifies `SaveQrPngUseCase` delegates matrix and filename to exporter and returns `DataResult.Success`.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/upi/domain/usecase/ShareQrUseCaseTest.kt`
+   - **Architectural Role:** JVM Unit Test (`app/src/test/...`)
+   - **Why Created:** Verifies `ShareQrUseCase` delegates matrix and title to exporter and returns `DataResult.Success`.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/upi/data/QrImageExporterTest.kt`
+   - **Architectural Role:** Robolectric JVM Integration Test (`app/src/test/...`)
+   - **Why Created:** Verifies MediaStore output creation and validates cached PNG magic bytes (`0x89 0x50 0x4E 0x47`) generated for FileProvider sharing.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/UpiUseCases.kt`
+   - **Why Modified:** Injected `saveQrPng` and `shareQr` use cases into `UpiUseCases` bundle to keep `UpiQrViewModel` constructor parameters concise.
+2. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Bound `QrImageExporter` interface to `QrImageExporterImpl` platform implementation with `@Singleton` scope.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrUiState.kt`
+   - **Why Modified:** Added `qrMatrix: QrCodeMatrix?` property to `UpiQrUiState.Content` to hold pure matrix for export operations.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModel.kt`
+   - **Why Modified:** Stored `qrMatrix` in UI state and implemented `saveToGallery()` and `shareQr()` with single guard conditions to comply with Detekt return count limits.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreen.kt`
+   - **Why Modified:** Converted `UpiQrActions` to data class with `onSaveToGalleryClick` and `onShareQrClick`, added `QrExportActionButtonsRow` with `Save to Gallery` and `Share QR` buttons, and wired snackbar feedback.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModelConfigTest.kt`
+   - **Why Modified:** Added unit tests verifying `saveToGallery()` and `shareQr()` return Success when content is ready and Error when not available.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreenTest.kt`
+   - **Why Modified:** Added Compose tests verifying "Save to Gallery" and "Share QR" buttons render and trigger action callbacks on click.
 
 ---
 
