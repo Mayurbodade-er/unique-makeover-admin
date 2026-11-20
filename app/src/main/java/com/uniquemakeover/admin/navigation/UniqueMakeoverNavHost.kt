@@ -21,6 +21,7 @@ import com.uniquemakeover.admin.feature.auth.presentation.PinLockRoute
 import com.uniquemakeover.admin.feature.clients.presentation.detail.ClientDetailRoute
 import com.uniquemakeover.admin.feature.clients.presentation.list.ClientsRoute
 import com.uniquemakeover.admin.feature.dashboard.presentation.DashboardRoute
+import com.uniquemakeover.admin.feature.reminders.presentation.RemindersRoute
 import com.uniquemakeover.admin.feature.services.presentation.ServicesRoute
 import com.uniquemakeover.admin.feature.settings.presentation.SettingsRoute
 
@@ -116,7 +117,9 @@ private fun UniqueMakeoverNavGraph(
         }
 
         composable(Routes.Reminders) {
-            PlaceholderScreen(title = "Reminders")
+            RemindersRoute(
+                viewModel = hiltViewModel()
+            )
         }
 
         composable(Routes.Settings) {
@@ -124,22 +127,5 @@ private fun UniqueMakeoverNavGraph(
                 viewModel = hiltViewModel()
             )
         }
-    }
-}
-
-@Composable
-private fun PlaceholderScreen(
-    title: String,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "$title (Coming Soon)",
-            style = MaterialTheme.typography.titleMedium,
-            color = TextMuted
-        )
     }
 }

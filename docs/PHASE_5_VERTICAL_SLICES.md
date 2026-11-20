@@ -372,24 +372,49 @@ class GetTomorrowQueueUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`RemindersViewModelTest.kt`:** Verifies emission of `RemindersUiState(queue = [...], pendingCount = 3)`.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/model/ReminderQueueItem.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/repository/RemindersRepository.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/data/repository/RemindersRepositoryImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/GetTomorrowQueueUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersScreen.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersViewModel.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersUiState.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/components/ReminderRow.kt
-app/src/test/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/GetTomorrowQueueUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersViewModelTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt (Adds observeTomorrowAppointments)
-app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt (Binds RemindersRepository)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/model/ReminderQueueItem.kt`
+   - **Architectural Role:** Domain Model (Reminders)
+   - **Why Created:** Pure Kotlin immutable entity pairing an `Appointment` with its computed reminder status (`isReminded`), decoupled from database entities and UI widgets.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/repository/RemindersRepository.kt`
+   - **Architectural Role:** Domain Repository Interface
+   - **Why Created:** Inversion-of-control contract declaring reactive stream retrieval of tomorrow's reminder queue and methods for marking/undoing reminder status.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/data/repository/RemindersRepositoryImpl.kt`
+   - **Architectural Role:** Data Repository Implementation
+   - **Why Created:** Implements `RemindersRepository`; calculates tomorrow's ISO date via `TimeProvider`, queries Room `AppointmentDao.observeTomorrowAppointments`, maps to domain models, and handles status updates on `@IoDispatcher`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/GetTomorrowQueueUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Single-responsibility use case exposing the reactive flow of tomorrow's scheduled client reminders to presentation consumers.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersUiState.kt`
+   - **Architectural Role:** Presentation (UI State)
+   - **Why Created:** Immutable UI state model holding loading flag, tomorrow header string, queue items list, and calculated reminded/total client counters.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersViewModel.kt`
+   - **Architectural Role:** Presentation (ViewModel)
+   - **Why Created:** Manages state for the Reminders screen; collects `GetTomorrowQueueUseCase`, derives reminded counts and formatted date labels, and exposes state via `StateFlow`.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/components/ReminderRow.kt`
+   - **Architectural Role:** Presentation (Compose UI Component)
+   - **Why Created:** Renders a luxury appointment card displaying client name, time chip, phone number, booked service, balance due badge, "Reminded ✓" or "Not Sent" status chip, and a >=48dp 1-tap WhatsApp action button adhering to `desing.md`.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersScreen.kt`
+   - **Architectural Role:** Presentation (Compose Screen)
+   - **Why Created:** Top-level screen for `Routes.Reminders`; displays top app bar, header progress card (e.g. "2 of 5 Reminded" with linear indicator), empty state view when no bookings exist, and lazy list of reminder cards.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/GetTomorrowQueueUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies `GetTomorrowQueueUseCase` flow emission and `isReminded` flag evaluation with deterministic test data.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersViewModelTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Tests ViewModel reactive state flow updating counters (`totalCount`, `remindedCount`), formatted tomorrow date strings, and empty state handling.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/util/TimeProvider.kt`
+   - **Why Modified:** Added `tomorrowDate(): String` interface method and default implementation calculating tomorrow's calendar date safely.
+2. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt`
+   - **Why Modified:** Added `observeTomorrowAppointments(tomorrowDate)` indexed query filtering `status = 'booked'` ordered by `time ASC`, and `updateReminded(id, date)` query.
+3. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Bound `RemindersRepository` interface to `RemindersRepositoryImpl` in Hilt DI container.
+4. `app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt`
+   - **Why Modified:** Replaced placeholder screen at `Routes.Reminders` with `RemindersRoute(viewModel = hiltViewModel())`.
 
 ---
 

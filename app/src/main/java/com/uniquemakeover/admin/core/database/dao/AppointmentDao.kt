@@ -84,6 +84,19 @@ interface AppointmentDao {
     @Query("UPDATE appointments SET paid = paid + :amount WHERE id = :id")
     suspend fun addPayment(id: String, amount: Int): Int
 
+    @Query(
+        """
+        SELECT * FROM appointments 
+        WHERE date = :tomorrowDate 
+          AND LOWER(status) = 'booked' 
+        ORDER BY time ASC
+        """
+    )
+    fun observeTomorrowAppointments(tomorrowDate: String): Flow<List<AppointmentEntity>>
+
+    @Query("UPDATE appointments SET reminded = :remindedDate WHERE id = :id")
+    suspend fun updateReminded(id: String, remindedDate: String?): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(appointment: AppointmentEntity)
 

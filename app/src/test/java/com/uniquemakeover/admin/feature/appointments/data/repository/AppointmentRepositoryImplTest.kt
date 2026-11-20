@@ -182,6 +182,18 @@ class AppointmentRepositoryImplTest {
             return 0
         }
 
+        override fun observeTomorrowAppointments(tomorrowDate: String): Flow<List<AppointmentEntity>> =
+            flowOf(storedEntities.filter { it.date == tomorrowDate && it.status.lowercase() == "booked" })
+
+        override suspend fun updateReminded(id: String, remindedDate: String?): Int {
+            val index = storedEntities.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                storedEntities[index] = storedEntities[index].copy(reminded = remindedDate)
+                return 1
+            }
+            return 0
+        }
+
         override suspend fun delete(appointment: AppointmentEntity) {
             storedEntities.removeAll { it.id == appointment.id }
         }
