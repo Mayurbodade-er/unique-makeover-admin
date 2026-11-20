@@ -1,9 +1,13 @@
 package com.uniquemakeover.admin.feature.upi.presentation
 
+import android.app.Activity
+import android.view.WindowManager
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
@@ -16,10 +20,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uniquemakeover.admin.core.ui.theme.BrandPrimary
 import com.uniquemakeover.admin.core.ui.theme.LuxuryGold
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
+import com.uniquemakeover.admin.feature.upi.presentation.components.QrCanvas
 import com.uniquemakeover.admin.feature.upi.presentation.components.UpiBlockingBanner
 
 @Composable
@@ -52,41 +62,87 @@ fun UpiQrScreen(
     onConfigureUpiClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    ScreenBrightnessBoostEffect()
+
+    val haptic = LocalHapticFeedback.current
+    LaunchedEffect((uiState as? UpiQrUiState.Content)?.qrBitmap) {
+        if ((uiState as? UpiQrUiState.Content)?.qrBitmap != null) {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = WarmBackground,
         topBar = { UpiQrTopBar(onNavigateBack = onNavigateBack) }
     ) { innerPadding ->
-        Box(
+        UpiQrBody(
+            uiState = uiState,
+            onConfigureUpiClick = onConfigureUpiClick,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-        ) {
-            when (uiState) {
-                is UpiQrUiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = LuxuryGold
-                    )
+        )
+    }
+}
+
+@Composable
+private fun ScreenBrightnessBoostEffect() {
+    val activity = LocalContext.current as? Activity
+    DisposableEffect(activity) {
+        val window = activity?.window
+        val previousBrightness = window?.attributes?.screenBrightness
+            ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        window?.let { win ->
+            val params = win.attributes
+            params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
+            win.attributes = params
+        }
+        onDispose {
+            window?.let { win ->
+                val params = win.attributes
+                params.screenBrightness = previousBrightness
+                win.attributes = params
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpiQrBody(
+    uiState: UpiQrUiState,
+    onConfigureUpiClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        when (uiState) {
+            is UpiQrUiState.Loading -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = LuxuryGold
+                )
+            }
+            is UpiQrUiState.MissingConfiguration -> {
+                UpiBlockingBanner(
+                    onConfigureUpiClick = onConfigureUpiClick,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+            is UpiQrUiState.Content -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    QrCanvas(content = uiState)
                 }
-                is UpiQrUiState.MissingConfiguration -> {
-                    UpiBlockingBanner(
-                        onConfigureUpiClick = onConfigureUpiClick,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                is UpiQrUiState.Content -> {
-                    UpiQrContent(
-                        content = uiState,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                is UpiQrUiState.Error -> {
-                    Text(
-                        text = "An error occurred",
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
+            }
+            is UpiQrUiState.Error -> {
+                Text(
+                    text = "An error occurred",
+                    modifier = Modifier.align(Alignment.Center)
+                )
             }
         }
     }
@@ -98,7 +154,7 @@ private fun UpiQrTopBar(onNavigateBack: () -> Unit) {
     TopAppBar(
         title = {
             Text(
-                text = "UPI Payment QR",
+                text = "UPI Scan & Pay",
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontFamily = FontFamily.Serif,
                     fontWeight = FontWeight.Bold
@@ -117,25 +173,4 @@ private fun UpiQrTopBar(onNavigateBack: () -> Unit) {
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = BrandPrimary)
     )
-}
-
-@Composable
-private fun UpiQrContent(
-    content: UpiQrUiState.Content,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier.padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = content.shopName,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "UPI: ${content.upiId}",
-            style = MaterialTheme.typography.bodyMedium
-        )
-    }
 }

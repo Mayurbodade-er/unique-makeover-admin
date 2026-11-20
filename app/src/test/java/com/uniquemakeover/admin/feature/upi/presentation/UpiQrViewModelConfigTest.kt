@@ -6,6 +6,10 @@ import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
+import com.uniquemakeover.admin.feature.upi.domain.model.QrCodeMatrix
+import com.uniquemakeover.admin.feature.upi.domain.repository.QrRepository
+import com.uniquemakeover.admin.feature.upi.domain.usecase.BuildUpiUriUseCase
+import com.uniquemakeover.admin.feature.upi.domain.usecase.GenerateQrMatrixUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -18,20 +22,28 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
 class UpiQrViewModelConfigTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var fakeSettingsRepository: FakeSettingsRepository
+    private lateinit var buildUpiUriUseCase: BuildUpiUriUseCase
+    private lateinit var generateQrMatrixUseCase: GenerateQrMatrixUseCase
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeSettingsRepository = FakeSettingsRepository()
+        buildUpiUriUseCase = BuildUpiUriUseCase()
+        generateQrMatrixUseCase = GenerateQrMatrixUseCase(FakeQrRepository())
     }
 
     @After
@@ -39,14 +51,22 @@ class UpiQrViewModelConfigTest {
         Dispatchers.resetMain()
     }
 
+    private fun createViewModel(
+        savedStateHandle: SavedStateHandle = SavedStateHandle()
+    ): UpiQrViewModel {
+        return UpiQrViewModel(
+            settingsRepository = fakeSettingsRepository,
+            buildUpiUriUseCase = buildUpiUriUseCase,
+            generateQrMatrixUseCase = generateQrMatrixUseCase,
+            savedStateHandle = savedStateHandle
+        )
+    }
+
     @Test
     fun nullSettings_emitsMissingConfiguration() = runTest {
         fakeSettingsRepository.emitSettings(null)
 
-        val viewModel = UpiQrViewModel(
-            settingsRepository = fakeSettingsRepository,
-            savedStateHandle = SavedStateHandle()
-        )
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         assertEquals(UpiQrUiState.MissingConfiguration, viewModel.uiState.value)
@@ -56,10 +76,7 @@ class UpiQrViewModelConfigTest {
     fun emptyUpi_emitsMissingConfiguration() = runTest {
         fakeSettingsRepository.emitSettings(Settings(shop = "Unique Makeover", upi = ""))
 
-        val viewModel = UpiQrViewModel(
-            settingsRepository = fakeSettingsRepository,
-            savedStateHandle = SavedStateHandle()
-        )
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         assertEquals(UpiQrUiState.MissingConfiguration, viewModel.uiState.value)
@@ -69,10 +86,7 @@ class UpiQrViewModelConfigTest {
     fun whitespaceUpi_emitsMissingConfiguration() = runTest {
         fakeSettingsRepository.emitSettings(Settings(shop = "Unique Makeover", upi = "   "))
 
-        val viewModel = UpiQrViewModel(
-            settingsRepository = fakeSettingsRepository,
-            savedStateHandle = SavedStateHandle()
-        )
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         assertEquals(UpiQrUiState.MissingConfiguration, viewModel.uiState.value)
@@ -82,17 +96,14 @@ class UpiQrViewModelConfigTest {
     fun invalidHandleUpi_emitsMissingConfiguration() = runTest {
         fakeSettingsRepository.emitSettings(Settings(shop = "Unique Makeover", upi = "invalid-handle-no-at"))
 
-        val viewModel = UpiQrViewModel(
-            settingsRepository = fakeSettingsRepository,
-            savedStateHandle = SavedStateHandle()
-        )
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         assertEquals(UpiQrUiState.MissingConfiguration, viewModel.uiState.value)
     }
 
     @Test
-    fun validUpi_emitsContentWithDetails() = runTest {
+    fun validUpi_emitsContentWithDetailsAndQrBitmap() = runTest {
         fakeSettingsRepository.emitSettings(
             Settings(shop = "Unique Salon", upi = "uniquemakeover@okhdfcbank")
         )
@@ -101,10 +112,7 @@ class UpiQrViewModelConfigTest {
             mapOf("amount" to 850, "clientName" to "Pooja Patil")
         )
 
-        val viewModel = UpiQrViewModel(
-            settingsRepository = fakeSettingsRepository,
-            savedStateHandle = savedStateHandle
-        )
+        val viewModel = createViewModel(savedStateHandle)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -114,16 +122,15 @@ class UpiQrViewModelConfigTest {
         assertEquals("uniquemakeover@okhdfcbank", content.upiId)
         assertEquals(850, content.amount)
         assertEquals("Pooja Patil - Salon Bill", content.note)
+        assertNotNull("QR Bitmap must be generated", content.qrBitmap)
+        assertTrue(content.upiUri.contains("uniquemakeover@okhdfcbank"))
     }
 
     @Test
     fun reactiveSettingsUpdate_transitionsMissingToContent() = runTest {
         fakeSettingsRepository.emitSettings(Settings(shop = "Unique Makeover", upi = ""))
 
-        val viewModel = UpiQrViewModel(
-            settingsRepository = fakeSettingsRepository,
-            savedStateHandle = SavedStateHandle()
-        )
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         assertEquals(UpiQrUiState.MissingConfiguration, viewModel.uiState.value)
@@ -137,6 +144,12 @@ class UpiQrViewModelConfigTest {
         assertTrue("Expected Content state after update but was $state", state is UpiQrUiState.Content)
         val content = state as UpiQrUiState.Content
         assertEquals("sunita@sbi", content.upiId)
+        assertNotNull("QR Bitmap must be generated on reactive update", content.qrBitmap)
+    }
+
+    private class FakeQrRepository : QrRepository {
+        override suspend fun generateQrMatrix(payload: String, sizePx: Int): QrCodeMatrix =
+            QrCodeMatrix(sizePx, sizePx, BooleanArray(sizePx * sizePx))
     }
 
     private class FakeSettingsRepository : SettingsRepository {

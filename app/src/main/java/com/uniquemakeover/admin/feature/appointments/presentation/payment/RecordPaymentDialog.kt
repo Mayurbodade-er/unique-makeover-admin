@@ -61,7 +61,7 @@ fun RecordPaymentDialog(
     uiState: RecordPaymentUiState,
     viewModel: RecordPaymentViewModel,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    onShowPaymentQr: (amount: Int, clientName: String) -> Unit = { _, _ -> }
 ) {
     LaunchedEffect(appointment.id) {
         viewModel.loadAppointment(appointment)
@@ -82,14 +82,14 @@ fun RecordPaymentDialog(
             topStart = SHEET_CORNER_RADIUS_DP.dp,
             topEnd = SHEET_CORNER_RADIUS_DP.dp
         ),
-        containerColor = WarmBackground,
-        modifier = modifier
+        containerColor = WarmBackground
     ) {
         RecordPaymentContent(
             appointment = appointment,
             uiState = uiState,
             viewModel = viewModel,
-            onDismiss = onDismiss
+            onDismiss = onDismiss,
+            onShowPaymentQr = onShowPaymentQr
         )
     }
 
@@ -107,7 +107,8 @@ private fun RecordPaymentContent(
     appointment: Appointment,
     uiState: RecordPaymentUiState,
     viewModel: RecordPaymentViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onShowPaymentQr: (amount: Int, clientName: String) -> Unit
 ) {
     val context = LocalContext.current
     Column(
@@ -129,6 +130,26 @@ private fun RecordPaymentContent(
             amountInput = uiState.amountInput,
             onAmountChange = { viewModel.onAmountChanged(it) }
         )
+        if (uiState.mode == PaymentMode.UPI) {
+            val balanceDue = (appointment.rate - appointment.paid).coerceAtLeast(0)
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = {
+                    val amt = uiState.amountInput.toIntOrNull() ?: balanceDue
+                    onShowPaymentQr(amt, appointment.name)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandPrimary)
+            ) {
+                Text(
+                    text = "📱 Show Payment QR",
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
         if (uiState.errorMessage != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(

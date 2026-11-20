@@ -88,7 +88,12 @@ private fun NavGraphBuilder.coreNavDestinations(navController: NavHostController
     }
 
     composable(Routes.Dashboard) {
-        DashboardRoute(viewModel = hiltViewModel())
+        DashboardRoute(
+            viewModel = hiltViewModel(),
+            onNavigateToUpiQr = { amount, clientName ->
+                navController.navigate(Routes.upiQr(amount, clientName))
+            }
+        )
     }
 
     composable(Routes.Appointments) {

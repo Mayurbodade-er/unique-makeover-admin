@@ -5,6 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
 import com.uniquemakeover.admin.core.util.UpiValidator
+import com.uniquemakeover.admin.feature.upi.domain.model.UpiRequest
+import com.uniquemakeover.admin.feature.upi.domain.usecase.BuildUpiUriUseCase
+import com.uniquemakeover.admin.feature.upi.domain.usecase.GenerateQrMatrixUseCase
+import com.uniquemakeover.admin.feature.upi.presentation.mapper.toBitmap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +21,8 @@ import javax.inject.Inject
 @HiltViewModel
 class UpiQrViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
+    private val buildUpiUriUseCase: BuildUpiUriUseCase,
+    private val generateQrMatrixUseCase: GenerateQrMatrixUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -44,8 +50,20 @@ class UpiQrViewModel @Inject constructor(
                     } else {
                         "Salon Payment"
                     }
+                    val upiRequest = UpiRequest(
+                        upiId = upiId,
+                        payeeName = shopName,
+                        amount = initialAmount,
+                        transactionNote = note
+                    )
+                    val upiUri = buildUpiUriUseCase(upiRequest)
+                    val qrMatrix = generateQrMatrixUseCase(upiUri)
+                    val qrBitmap = qrMatrix.toBitmap()
+
                     _uiState.update {
                         UpiQrUiState.Content(
+                            qrBitmap = qrBitmap,
+                            upiUri = upiUri,
                             shopName = shopName,
                             upiId = upiId,
                             amount = initialAmount,

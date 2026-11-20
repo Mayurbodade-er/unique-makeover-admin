@@ -240,25 +240,58 @@ class GenerateQrBitmapUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **URI Protocol Round-Trip Test:** Verifies that decoding the generated ZXing bitmap with ZXing's `MultiFormatReader` yields the exact original `upi://pay` URI string.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/model/UpiRequest.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/repository/QrRepository.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/data/platform/ZxingQrEncoder.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/BuildUpiUriUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/GenerateQrBitmapUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreen.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModel.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrUiState.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/components/QrCanvas.kt
-app/src/test/java/com/uniquemakeover/admin/feature/upi/domain/usecase/BuildUpiUriUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/upi/data/ZxingQrEncoderTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreenTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt (Binds QrRepository to ZxingQrEncoder)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/model/UpiRequest.kt`
+   - **Architectural Role:** Domain Model (Core/UPI)
+   - **Why Created:** Pure Kotlin immutable model (`upiId`, `payeeName`, `amount`, `transactionNote`) representing standard payment requests independent of Android or database frameworks.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/model/QrCodeMatrix.kt`
+   - **Architectural Role:** Domain Model (Core/UPI)
+   - **Why Created:** Encapsulates the 2D boolean module matrix of a generated QR code in pure Kotlin, ensuring domain boundaries stay 100% free of `android.graphics.Bitmap`.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/repository/QrRepository.kt`
+   - **Architectural Role:** Domain Repository Interface
+   - **Why Created:** Defines platform QR encoding contract `generateQrMatrix(payload, sizePx)` allowing pure Kotlin domain logic to invoke QR generation.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/BuildUpiUriUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Encapsulates NPCI UPI URI generation with strict RFC 3986 percent-encoding and 2-decimal currency formatting (`850` -> `"850.00"`).
+5. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/GenerateQrMatrixUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Single-responsibility use case delegating QR matrix calculation to `QrRepository` with zero Android framework imports.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/upi/data/platform/ZxingQrEncoder.kt`
+   - **Architectural Role:** Platform Data Repository Implementation
+   - **Why Created:** Implements `QrRepository` using embedded standalone ZXing Core (`QRCodeWriter`), generating 512x512 matrices and ARGB_8888 Bitmaps with error correction in $< 20\text{ ms}$ offline.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/mapper/QrBitmapMapper.kt`
+   - **Architectural Role:** Presentation Mapper
+   - **Why Created:** Maps pure Kotlin `QrCodeMatrix` to Android `Bitmap.Config.ARGB_8888` for display on the Compose UI canvas.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/components/QrCanvas.kt`
+   - **Architectural Role:** Presentation (Compose UI Component)
+   - **Why Created:** Renders high-contrast white QR card, luxury gold amount typography, merchant name and UPI handle, and transaction note adhering to `desing.md`.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/upi/domain/usecase/BuildUpiUriUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Validates standard NPCI URI format, 2-decimal formatting, special character percent-encoding, and zero-amount omission.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/upi/data/ZxingQrEncoderTest.kt`
+    - **Architectural Role:** Platform Integration & Boundary Test
+    - **Why Created:** Validates 512x512 bitmap creation, module contrast, and round-trip decoding via ZXing `MultiFormatReader`.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreenTest.kt`
+    - **Architectural Role:** Robolectric Compose UI Test
+    - **Why Created:** Verifies QR screen rendering, `QrCanvas` elements, and window brightness maximization effect.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Bound `QrRepository` to `ZxingQrEncoder` in Hilt DI.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModel.kt`
+   - **Why Modified:** Injected `BuildUpiUriUseCase` and `GenerateQrMatrixUseCase` to generate and emit offline QR bitmap into `UpiQrUiState.Content`.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreen.kt`
+   - **Why Modified:** Integrated `QrCanvas`, temporary window brightness boost to 100% via `DisposableEffect`, and haptic feedback tick upon QR rendering.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/payment/RecordPaymentDialog.kt`
+   - **Why Modified:** Added `[📱 Show Payment QR]` button when `PaymentMode.UPI` is selected to enable counter-side 1-tap QR launching (AC-UPI-01.4).
+5. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt`
+   - **Why Modified:** Connected `RecordPaymentDialog.onShowPaymentQr` to `onNavigateToUpiQr` deep link.
+6. `app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt`
+   - **Why Modified:** Passed `onNavigateToUpiQr` callback from `DashboardRoute` to navigation host.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModelConfigTest.kt`
+   - **Why Modified:** Updated view model test harness with `BuildUpiUriUseCase` and `FakeQrRepository`.
 
 ---
 
