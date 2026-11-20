@@ -100,16 +100,36 @@ sealed interface UpiQrUiState {
 ### 11. Internal Contract / Boundary Tests
 * **`UpiBlockingBannerTest.kt` (Compose UI Test):** Verifies button click triggers deep link navigation callback.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/components/UpiBlockingBanner.kt
-app/src/test/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModelConfigTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreen.kt (Integrates UpiBlockingBanner)
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModel.kt (Evaluates missing UPI state)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/model/PaymentPreset.kt`
+   - **Architectural Role:** Domain Model (Core/UPI)
+   - **Why Created:** Defines the immutable domain enum `PaymentPreset` (`BALANCE_DUE`, `ADVANCE_30`, `FULL`, `CUSTOM`) representing payment calculation presets independent of any presentation or database frameworks.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrUiState.kt`
+   - **Architectural Role:** Presentation (UI State Contract)
+   - **Why Created:** Models the exhaustive sealed interface states of the offline UPI screen (`Loading`, `MissingConfiguration`, `Content`, `Error`) ensuring compiler-enforced state handling and blocking corrupt QR rendering when UPI ID is absent.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/components/UpiBlockingBanner.kt`
+   - **Architectural Role:** Presentation (Compose UI Component)
+   - **Why Created:** Renders the luxury-themed amber warning alert banner informing the salon owner when merchant UPI is unconfigured, featuring an ergonomic $\ge 48\text{dp}$ button to deep link to Settings.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreen.kt`
+   - **Architectural Role:** Presentation (Compose Screen & Route)
+   - **Why Created:** Implements `UpiQrRoute` and `UpiQrScreen` composables adhering to `desing.md` WarmBackground and BrandPrimary styling, rendering `UpiBlockingBanner` when in `MissingConfiguration` state.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModel.kt`
+   - **Architectural Role:** Presentation (Architecture Component ViewModel)
+   - **Why Created:** Observes reactive `SettingsRepository.getSettings()` Flow, validates merchant UPI ID via `UpiValidator.isValid()`, prunes whitespace, and emits `MissingConfiguration` or `Content` state.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModelConfigTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Validates ViewModel state transitions for null, empty, whitespace-only, invalid handle, and valid UPI configurations, as well as reactive state emission.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/upi/presentation/components/UpiBlockingBannerTest.kt`
+   - **Architectural Role:** Robolectric Compose UI Component Test
+   - **Why Created:** Verifies the blocking banner headline, explanatory description, and deep link button click interaction.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/navigation/Routes.kt`
+   - **Why Modified:** Added `Routes.UpiQr` destination constant and parameterized route builder `Routes.upiQr(amount, clientName)`.
+2. `app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt`
+   - **Why Modified:** Wired `Routes.UpiQr` destination to `UpiQrRoute` with back navigation and `onConfigureUpiClick` callback routing directly to `Routes.Settings`, decomposing navigation destinations into modular builder extensions to satisfy Detekt function length limit ($\le 60$ lines).
 
 ---
 
