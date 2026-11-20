@@ -61,7 +61,7 @@ fun RecordPaymentDialog(
     uiState: RecordPaymentUiState,
     viewModel: RecordPaymentViewModel,
     onDismiss: () -> Unit,
-    onShowPaymentQr: (amount: Int, clientName: String) -> Unit = { _, _ -> }
+    onShowPaymentQr: (amount: Int, rate: Int, paid: Int, clientName: String) -> Unit = { _, _, _, _ -> }
 ) {
     LaunchedEffect(appointment.id) {
         viewModel.loadAppointment(appointment)
@@ -108,7 +108,7 @@ private fun RecordPaymentContent(
     uiState: RecordPaymentUiState,
     viewModel: RecordPaymentViewModel,
     onDismiss: () -> Unit,
-    onShowPaymentQr: (amount: Int, clientName: String) -> Unit
+    onShowPaymentQr: (amount: Int, rate: Int, paid: Int, clientName: String) -> Unit
 ) {
     val context = LocalContext.current
     Column(
@@ -136,7 +136,7 @@ private fun RecordPaymentContent(
             OutlinedButton(
                 onClick = {
                     val amt = uiState.amountInput.toIntOrNull() ?: balanceDue
-                    onShowPaymentQr(amt, appointment.name)
+                    onShowPaymentQr(amt, appointment.rate, appointment.paid, appointment.name)
                 },
                 modifier = Modifier
                     .fillMaxWidth()

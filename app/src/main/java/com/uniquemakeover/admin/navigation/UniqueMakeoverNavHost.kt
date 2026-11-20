@@ -90,8 +90,8 @@ private fun NavGraphBuilder.coreNavDestinations(navController: NavHostController
     composable(Routes.Dashboard) {
         DashboardRoute(
             viewModel = hiltViewModel(),
-            onNavigateToUpiQr = { amount, clientName ->
-                navController.navigate(Routes.upiQr(amount, clientName))
+            onNavigateToUpiQr = { amount, rate, paid, clientName ->
+                navController.navigate(Routes.upiQr(amount, rate, paid, clientName))
             }
         )
     }
@@ -138,6 +138,14 @@ private fun NavGraphBuilder.upiNavDestination(navController: NavHostController) 
         route = Routes.UpiQr,
         arguments = listOf(
             navArgument("amount") {
+                type = NavType.IntType
+                defaultValue = 0
+            },
+            navArgument("rate") {
+                type = NavType.IntType
+                defaultValue = 0
+            },
+            navArgument("paid") {
                 type = NavType.IntType
                 defaultValue = 0
             },

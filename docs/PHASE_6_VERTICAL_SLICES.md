@@ -378,18 +378,41 @@ class ComputePresetAmountUseCase @Inject constructor() {
 ### 11. Internal Contract / Boundary Tests
 * **`PresetSelectorTest.kt` (Compose UI Test):** Verifies tapping "Advance (30%)" triggers ViewModel callback with calculated figure.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/model/PaymentPreset.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/ComputePresetAmountUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/components/PresetSelector.kt
-app/src/test/java/com/uniquemakeover/admin/feature/upi/domain/usecase/ComputePresetAmountUseCaseTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreen.kt (Integrates PresetSelector)
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModel.kt (Handles preset selection)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/ComputePresetAmountUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Implements pure Kotlin business rules for calculating preset settlement amounts: 30% advance with whole-rupee rounding (`(rate * 0.30).roundToInt()`), balance due deduction (`(rate - paid).coerceAtLeast(0)`), full rate, and custom amount boundary clamping (`1` to `100,000`).
+2. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/components/PresetSelector.kt`
+   - **Architectural Role:** Presentation (Compose UI Component)
+   - **Why Created:** Renders ergonomic $\ge 48\text{dp}$ touch chip selector for "Balance Due", "Advance (30%)", "Full Payment", and "Custom ✏️", dynamically displaying animated custom numeric input field with clear action button when custom mode is chosen.
+3. `app/src/test/java/com/uniquemakeover/admin/feature/upi/domain/usecase/ComputePresetAmountUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Asserts whole-rupee rounding on fractional advances (`355 * 0.30` -> `107`), balance due deductions with overpayment protection, and NPCI boundary clamping.
+4. `app/src/test/java/com/uniquemakeover/admin/feature/upi/presentation/components/PresetSelectorTest.kt`
+   - **Architectural Role:** Robolectric Compose UI Component Test
+   - **Why Created:** Tests rendering of all preset chips, chip selection callback triggers, disabled advance state when advance is already covered, and custom text input interactions.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/model/PaymentPreset.kt`
+   - **Why Modified:** Converted from simple enum to sealed interface hierarchy (`BalanceDue`, `Advance30`, `FullPayment`, `Custom(customAmount)`) to model parametric custom amounts cleanly in domain.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrUiState.kt`
+   - **Why Modified:** Added `customAmountInput` and `isAdvanceDisabled` fields to `UpiQrUiState.Content` to drive reactive UI states.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModel.kt`
+   - **Why Modified:** Injected `ComputePresetAmountUseCase`, evaluated advance covered condition (`paid >= 30% rate`), handled `onPresetSelected` and `onCustomAmountChanged`, and dynamically regenerated the UPI URI and QR bitmap.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreen.kt`
+   - **Why Modified:** Integrated `PresetSelector` into content scroll container, wiring preset and custom amount events to ViewModel.
+5. `app/src/main/java/com/uniquemakeover/admin/navigation/Routes.kt`
+   - **Why Modified:** Updated `Routes.UpiQr` route pattern and `upiQr(amount, rate, paid, clientName)` helper to forward rate and paid figures for accurate preset math.
+6. `app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt`
+   - **Why Modified:** Registered `rate` and `paid` navigation arguments in `upiNavDestination` and forwarded them from `DashboardRoute`.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/payment/RecordPaymentDialog.kt`
+   - **Why Modified:** Forwarded `appointment.rate` and `appointment.paid` into `onShowPaymentQr` callback.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt`
+   - **Why Modified:** Passed `(amount, rate, paid, name)` from payment modal to `onNavigateToUpiQr`.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModelConfigTest.kt`
+   - **Why Modified:** Added test cases verifying preset selection amount updates, custom amount typing, and advance covered state.
 
 ---
 

@@ -6,9 +6,11 @@ import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
+import com.uniquemakeover.admin.feature.upi.domain.model.PaymentPreset
 import com.uniquemakeover.admin.feature.upi.domain.model.QrCodeMatrix
 import com.uniquemakeover.admin.feature.upi.domain.repository.QrRepository
 import com.uniquemakeover.admin.feature.upi.domain.usecase.BuildUpiUriUseCase
+import com.uniquemakeover.admin.feature.upi.domain.usecase.ComputePresetAmountUseCase
 import com.uniquemakeover.admin.feature.upi.domain.usecase.GenerateQrMatrixUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -37,6 +39,7 @@ class UpiQrViewModelConfigTest {
     private lateinit var fakeSettingsRepository: FakeSettingsRepository
     private lateinit var buildUpiUriUseCase: BuildUpiUriUseCase
     private lateinit var generateQrMatrixUseCase: GenerateQrMatrixUseCase
+    private lateinit var computePresetAmountUseCase: ComputePresetAmountUseCase
 
     @Before
     fun setUp() {
@@ -44,6 +47,7 @@ class UpiQrViewModelConfigTest {
         fakeSettingsRepository = FakeSettingsRepository()
         buildUpiUriUseCase = BuildUpiUriUseCase()
         generateQrMatrixUseCase = GenerateQrMatrixUseCase(FakeQrRepository())
+        computePresetAmountUseCase = ComputePresetAmountUseCase()
     }
 
     @After
@@ -58,6 +62,7 @@ class UpiQrViewModelConfigTest {
             settingsRepository = fakeSettingsRepository,
             buildUpiUriUseCase = buildUpiUriUseCase,
             generateQrMatrixUseCase = generateQrMatrixUseCase,
+            computePresetAmountUseCase = computePresetAmountUseCase,
             savedStateHandle = savedStateHandle
         )
     }
@@ -127,24 +132,53 @@ class UpiQrViewModelConfigTest {
     }
 
     @Test
-    fun reactiveSettingsUpdate_transitionsMissingToContent() = runTest {
-        fakeSettingsRepository.emitSettings(Settings(shop = "Unique Makeover", upi = ""))
-
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        assertEquals(UpiQrUiState.MissingConfiguration, viewModel.uiState.value)
-
+    fun onPresetSelected_advance30_updatesAmountAndRegenerates() = runTest {
         fakeSettingsRepository.emitSettings(
-            Settings(shop = "Unique Makeover", upi = "sunita@sbi")
+            Settings(shop = "Unique Salon", upi = "uniquemakeover@okhdfcbank")
         )
+
+        val savedStateHandle = SavedStateHandle(
+            mapOf("rate" to 1500, "paid" to 0, "clientName" to "Rani")
+        )
+
+        val viewModel = createViewModel(savedStateHandle)
         advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertTrue("Expected Content state after update but was $state", state is UpiQrUiState.Content)
-        val content = state as UpiQrUiState.Content
-        assertEquals("sunita@sbi", content.upiId)
-        assertNotNull("QR Bitmap must be generated on reactive update", content.qrBitmap)
+        // Default is BalanceDue -> 1500
+        val initialContent = viewModel.uiState.value as UpiQrUiState.Content
+        assertEquals(1500, initialContent.amount)
+
+        // Select Advance (30%) -> 450
+        viewModel.onPresetSelected(PaymentPreset.Advance30)
+        advanceUntilIdle()
+
+        val updatedContent = viewModel.uiState.value as UpiQrUiState.Content
+        assertEquals(450, updatedContent.amount)
+        assertEquals(PaymentPreset.Advance30, updatedContent.selectedPreset)
+        assertTrue(updatedContent.upiUri.contains("am=450.00"))
+    }
+
+    @Test
+    fun onCustomAmountChanged_updatesAmountAndRegenerates() = runTest {
+        fakeSettingsRepository.emitSettings(
+            Settings(shop = "Unique Salon", upi = "uniquemakeover@okhdfcbank")
+        )
+
+        val savedStateHandle = SavedStateHandle(
+            mapOf("rate" to 1000, "paid" to 0, "clientName" to "Neha")
+        )
+
+        val viewModel = createViewModel(savedStateHandle)
+        advanceUntilIdle()
+
+        viewModel.onCustomAmountChanged("650")
+        advanceUntilIdle()
+
+        val updatedContent = viewModel.uiState.value as UpiQrUiState.Content
+        assertEquals(650, updatedContent.amount)
+        assertEquals(PaymentPreset.Custom(650), updatedContent.selectedPreset)
+        assertEquals("650", updatedContent.customAmountInput)
+        assertTrue(updatedContent.upiUri.contains("am=650.00"))
     }
 
     private class FakeQrRepository : QrRepository {

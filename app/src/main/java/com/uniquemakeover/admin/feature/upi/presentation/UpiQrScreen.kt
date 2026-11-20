@@ -31,11 +31,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uniquemakeover.admin.core.ui.theme.BrandPrimary
 import com.uniquemakeover.admin.core.ui.theme.LuxuryGold
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
+import com.uniquemakeover.admin.feature.upi.domain.model.PaymentPreset
+import com.uniquemakeover.admin.feature.upi.presentation.components.PresetSelector
 import com.uniquemakeover.admin.feature.upi.presentation.components.QrCanvas
 import com.uniquemakeover.admin.feature.upi.presentation.components.UpiBlockingBanner
 
@@ -43,15 +44,15 @@ import com.uniquemakeover.admin.feature.upi.presentation.components.UpiBlockingB
 fun UpiQrRoute(
     viewModel: UpiQrViewModel,
     onNavigateBack: () -> Unit,
-    onConfigureUpiClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onConfigureUpiClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     UpiQrScreen(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
         onConfigureUpiClick = onConfigureUpiClick,
-        modifier = modifier
+        onPresetSelect = { viewModel.onPresetSelected(it) },
+        onCustomAmountChange = { viewModel.onCustomAmountChanged(it) }
     )
 }
 
@@ -60,7 +61,8 @@ fun UpiQrScreen(
     uiState: UpiQrUiState,
     onNavigateBack: () -> Unit = {},
     onConfigureUpiClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    onPresetSelect: (PaymentPreset) -> Unit = {},
+    onCustomAmountChange: (String) -> Unit = {}
 ) {
     ScreenBrightnessBoostEffect()
 
@@ -72,13 +74,15 @@ fun UpiQrScreen(
     }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         containerColor = WarmBackground,
         topBar = { UpiQrTopBar(onNavigateBack = onNavigateBack) }
     ) { innerPadding ->
         UpiQrBody(
             uiState = uiState,
             onConfigureUpiClick = onConfigureUpiClick,
+            onPresetSelect = onPresetSelect,
+            onCustomAmountChange = onCustomAmountChange,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
@@ -112,6 +116,8 @@ private fun ScreenBrightnessBoostEffect() {
 private fun UpiQrBody(
     uiState: UpiQrUiState,
     onConfigureUpiClick: () -> Unit,
+    onPresetSelect: (PaymentPreset) -> Unit,
+    onCustomAmountChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier) {
@@ -129,14 +135,11 @@ private fun UpiQrBody(
                 )
             }
             is UpiQrUiState.Content -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    QrCanvas(content = uiState)
-                }
+                UpiQrContentColumn(
+                    content = uiState,
+                    onPresetSelect = onPresetSelect,
+                    onCustomAmountChange = onCustomAmountChange
+                )
             }
             is UpiQrUiState.Error -> {
                 Text(
@@ -145,6 +148,29 @@ private fun UpiQrBody(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun UpiQrContentColumn(
+    content: UpiQrUiState.Content,
+    onPresetSelect: (PaymentPreset) -> Unit,
+    onCustomAmountChange: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        QrCanvas(content = content)
+        PresetSelector(
+            selectedPreset = content.selectedPreset,
+            isAdvanceDisabled = content.isAdvanceDisabled,
+            customAmountInput = content.customAmountInput,
+            onPresetSelect = onPresetSelect,
+            onCustomAmountChange = onCustomAmountChange
+        )
     }
 }
 
