@@ -1,17 +1,21 @@
 package com.uniquemakeover.admin.feature.upi.presentation
 
 import androidx.lifecycle.SavedStateHandle
+import com.uniquemakeover.admin.core.common.UiText
 import com.uniquemakeover.admin.core.domain.model.CommunicationConfig
 import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
+import com.uniquemakeover.admin.feature.upi.domain.launcher.UpiWhatsAppLauncher
 import com.uniquemakeover.admin.feature.upi.domain.model.PaymentPreset
 import com.uniquemakeover.admin.feature.upi.domain.model.QrCodeMatrix
 import com.uniquemakeover.admin.feature.upi.domain.repository.QrRepository
 import com.uniquemakeover.admin.feature.upi.domain.usecase.BuildUpiUriUseCase
+import com.uniquemakeover.admin.feature.upi.domain.usecase.BuildUpiWhatsAppMessageUseCase
 import com.uniquemakeover.admin.feature.upi.domain.usecase.ComputePresetAmountUseCase
 import com.uniquemakeover.admin.feature.upi.domain.usecase.GenerateQrMatrixUseCase
+import com.uniquemakeover.admin.feature.upi.domain.usecase.UpiUseCases
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -37,17 +41,25 @@ class UpiQrViewModelConfigTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var fakeSettingsRepository: FakeSettingsRepository
-    private lateinit var buildUpiUriUseCase: BuildUpiUriUseCase
-    private lateinit var generateQrMatrixUseCase: GenerateQrMatrixUseCase
-    private lateinit var computePresetAmountUseCase: ComputePresetAmountUseCase
+    private lateinit var fakeWhatsAppLauncher: FakeUpiWhatsAppLauncher
+    private lateinit var upiUseCases: UpiUseCases
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeSettingsRepository = FakeSettingsRepository()
-        buildUpiUriUseCase = BuildUpiUriUseCase()
-        generateQrMatrixUseCase = GenerateQrMatrixUseCase(FakeQrRepository())
-        computePresetAmountUseCase = ComputePresetAmountUseCase()
+        fakeWhatsAppLauncher = FakeUpiWhatsAppLauncher()
+        val buildUpiUriUseCase = BuildUpiUriUseCase()
+        val generateQrMatrixUseCase = GenerateQrMatrixUseCase(FakeQrRepository())
+        val computePresetAmountUseCase = ComputePresetAmountUseCase()
+        val buildWhatsAppMessageUseCase = BuildUpiWhatsAppMessageUseCase(buildUpiUriUseCase)
+
+        upiUseCases = UpiUseCases(
+            buildUpiUri = buildUpiUriUseCase,
+            generateQrMatrix = generateQrMatrixUseCase,
+            computePresetAmount = computePresetAmountUseCase,
+            buildWhatsAppMessage = buildWhatsAppMessageUseCase
+        )
     }
 
     @After
@@ -60,9 +72,8 @@ class UpiQrViewModelConfigTest {
     ): UpiQrViewModel {
         return UpiQrViewModel(
             settingsRepository = fakeSettingsRepository,
-            buildUpiUriUseCase = buildUpiUriUseCase,
-            generateQrMatrixUseCase = generateQrMatrixUseCase,
-            computePresetAmountUseCase = computePresetAmountUseCase,
+            upiUseCases = upiUseCases,
+            upiWhatsAppLauncher = fakeWhatsAppLauncher,
             savedStateHandle = savedStateHandle
         )
     }
@@ -179,6 +190,60 @@ class UpiQrViewModelConfigTest {
         assertEquals(PaymentPreset.Custom(650), updatedContent.selectedPreset)
         assertEquals("650", updatedContent.customAmountInput)
         assertTrue(updatedContent.upiUri.contains("am=650.00"))
+    }
+
+    @Test
+    fun launchWhatsAppPaymentRequest_whenContentReady_dispatchesFormattedMessage() = runTest {
+        fakeSettingsRepository.emitSettings(
+            Settings(shop = "Unique Salon", upi = "uniquemakeover@okhdfcbank")
+        )
+
+        val savedStateHandle = SavedStateHandle(
+            mapOf(
+                "amount" to 850,
+                "clientName" to "Pooja Patil",
+                "phone" to "9876543210",
+                "services" to "Facial"
+            )
+        )
+
+        val viewModel = createViewModel(savedStateHandle)
+        advanceUntilIdle()
+
+        val result = viewModel.launchWhatsAppPaymentRequest()
+        assertTrue(result is DataResult.Success)
+        assertEquals("9876543210", fakeWhatsAppLauncher.lastPhone)
+        val message = fakeWhatsAppLauncher.lastMessage ?: ""
+        assertTrue(message.contains("Hello Pooja Patil"))
+        assertTrue(message.contains("₹850 for your Facial booking"))
+        assertTrue(message.contains("upi://pay?pa=uniquemakeover@okhdfcbank"))
+    }
+
+    @Test
+    fun launchWhatsAppPaymentRequest_whenNotContent_returnsError() = runTest {
+        fakeSettingsRepository.emitSettings(null)
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val result = viewModel.launchWhatsAppPaymentRequest()
+        assertTrue(result is DataResult.Error)
+    }
+
+    private class FakeUpiWhatsAppLauncher : UpiWhatsAppLauncher {
+        var lastPhone: String? = null
+        var lastMessage: String? = null
+        var shouldFail: Boolean = false
+
+        override fun launchPaymentRequest(phone: String, message: String): DataResult<Unit> {
+            lastPhone = phone
+            lastMessage = message
+            return if (shouldFail) {
+                DataResult.Error(UiText.DynamicString("WhatsApp not installed"))
+            } else {
+                DataResult.Success(Unit)
+            }
+        }
     }
 
     private class FakeQrRepository : QrRepository {

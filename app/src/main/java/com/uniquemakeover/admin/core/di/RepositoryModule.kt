@@ -22,7 +22,9 @@ import com.uniquemakeover.admin.feature.services.data.image.LocalImageStore
 import com.uniquemakeover.admin.feature.services.data.repository.ServiceRepositoryImpl
 import com.uniquemakeover.admin.feature.services.domain.repository.ImageStorageRepository
 import com.uniquemakeover.admin.feature.settings.data.repository.SettingsRepositoryImpl
+import com.uniquemakeover.admin.feature.upi.data.platform.UpiWhatsAppLauncherImpl
 import com.uniquemakeover.admin.feature.upi.data.platform.ZxingQrEncoder
+import com.uniquemakeover.admin.feature.upi.domain.launcher.UpiWhatsAppLauncher
 import com.uniquemakeover.admin.feature.upi.domain.repository.QrRepository
 import dagger.Binds
 import dagger.Module
@@ -105,4 +107,10 @@ abstract class RepositoryModule {
     abstract fun bindQrRepository(
         zxingQrEncoder: ZxingQrEncoder
     ): QrRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindUpiWhatsAppLauncher(
+        upiWhatsAppLauncherImpl: UpiWhatsAppLauncherImpl
+    ): UpiWhatsAppLauncher
 }

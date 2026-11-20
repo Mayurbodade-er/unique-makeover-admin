@@ -3,13 +3,15 @@ package com.uniquemakeover.admin.feature.upi.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.uniquemakeover.admin.core.common.UiText
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
+import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.core.util.UpiValidator
+import com.uniquemakeover.admin.feature.upi.domain.launcher.UpiWhatsAppLauncher
 import com.uniquemakeover.admin.feature.upi.domain.model.PaymentPreset
 import com.uniquemakeover.admin.feature.upi.domain.model.UpiRequest
-import com.uniquemakeover.admin.feature.upi.domain.usecase.BuildUpiUriUseCase
 import com.uniquemakeover.admin.feature.upi.domain.usecase.ComputePresetAmountUseCase
-import com.uniquemakeover.admin.feature.upi.domain.usecase.GenerateQrMatrixUseCase
+import com.uniquemakeover.admin.feature.upi.domain.usecase.UpiUseCases
 import com.uniquemakeover.admin.feature.upi.presentation.mapper.toBitmap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,9 +29,8 @@ private const val ADVANCE_RATIO = 0.30
 @HiltViewModel
 class UpiQrViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
-    private val buildUpiUriUseCase: BuildUpiUriUseCase,
-    private val generateQrMatrixUseCase: GenerateQrMatrixUseCase,
-    private val computePresetAmountUseCase: ComputePresetAmountUseCase,
+    private val upiUseCases: UpiUseCases,
+    private val upiWhatsAppLauncher: UpiWhatsAppLauncher,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -40,6 +41,8 @@ class UpiQrViewModel @Inject constructor(
     private val paid: Int = savedStateHandle.get<Int>("paid")
         ?: savedStateHandle.get<String>("paid")?.toIntOrNull() ?: 0
     private val clientName: String = savedStateHandle.get<String>("clientName") ?: ""
+    private val phone: String = savedStateHandle.get<String>("phone") ?: ""
+    private val services: String = savedStateHandle.get<String>("services") ?: ""
 
     private val isAdvanceDisabled: Boolean
         get() {
@@ -91,8 +94,8 @@ class UpiQrViewModel @Inject constructor(
             amount = amount,
             transactionNote = note
         )
-        val upiUri = buildUpiUriUseCase(upiRequest)
-        val qrMatrix = generateQrMatrixUseCase(upiUri)
+        val upiUri = upiUseCases.buildUpiUri(upiRequest)
+        val qrMatrix = upiUseCases.generateQrMatrix(upiUri)
         val qrBitmap = qrMatrix.toBitmap()
 
         _uiState.update {
@@ -111,7 +114,7 @@ class UpiQrViewModel @Inject constructor(
 
     fun onPresetSelected(preset: PaymentPreset) {
         val content = _uiState.value as? UpiQrUiState.Content ?: return
-        val newAmount = computePresetAmountUseCase(rate, paid, preset)
+        val newAmount = upiUseCases.computePresetAmount(rate, paid, preset)
         val customInput = if (preset is PaymentPreset.Custom) {
             if (preset.customAmount > 0) preset.customAmount.toString() else ""
         } else {
@@ -144,8 +147,8 @@ class UpiQrViewModel @Inject constructor(
                 amount = newAmount,
                 transactionNote = content.note
             )
-            val upiUri = buildUpiUriUseCase(upiRequest)
-            val qrMatrix = generateQrMatrixUseCase(upiUri)
+            val upiUri = upiUseCases.buildUpiUri(upiRequest)
+            val qrMatrix = upiUseCases.generateQrMatrix(upiUri)
             val qrBitmap = qrMatrix.toBitmap()
 
             _uiState.update {
@@ -158,5 +161,23 @@ class UpiQrViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun launchWhatsAppPaymentRequest(): DataResult<Unit> {
+        val content = _uiState.value as? UpiQrUiState.Content
+            ?: return DataResult.Error(UiText.DynamicString("QR Code not generated yet"))
+        val upiRequest = UpiRequest(
+            upiId = content.upiId,
+            payeeName = content.shopName,
+            amount = content.amount,
+            transactionNote = content.note
+        )
+        val message = upiUseCases.buildWhatsAppMessage(
+            clientName = clientName,
+            amount = content.amount,
+            services = services,
+            request = upiRequest
+        )
+        return upiWhatsAppLauncher.launchPaymentRequest(phone, message)
     }
 }

@@ -68,7 +68,7 @@ fun DashboardRoute(
     viewModel: DashboardViewModel,
     bookingViewModel: BookingViewModel = hiltViewModel(),
     paymentViewModel: RecordPaymentViewModel = hiltViewModel(),
-    onNavigateToUpiQr: (amount: Int, rate: Int, paid: Int, clientName: String) -> Unit = { _, _, _, _ -> },
+    onNavigateToUpiQr: (appointment: Appointment, amount: Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -114,9 +114,9 @@ fun DashboardRoute(
         target = paymentTarget,
         uiState = paymentUiState,
         viewModel = paymentViewModel,
-        onShowPaymentQr = { amt, rate, paid, name ->
+        onShowPaymentQr = { apt, amt ->
             paymentTarget = null
-            onNavigateToUpiQr(amt, rate, paid, name)
+            onNavigateToUpiQr(apt, amt)
         },
         onDismiss = {
             paymentTarget = null
@@ -193,7 +193,7 @@ private fun DashboardPaymentModal(
     target: Appointment?,
     uiState: RecordPaymentUiState,
     viewModel: RecordPaymentViewModel,
-    onShowPaymentQr: (Int, Int, Int, String) -> Unit,
+    onShowPaymentQr: (Appointment, Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     if (target != null) {

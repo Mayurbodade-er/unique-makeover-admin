@@ -2,15 +2,16 @@ package com.uniquemakeover.admin.feature.upi.presentation
 
 import android.app.Activity
 import android.graphics.Bitmap
-import android.view.WindowManager
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.uniquemakeover.admin.core.ui.theme.UniqueMakeoverTheme
 import com.uniquemakeover.admin.feature.upi.presentation.components.QR_CANVAS_TEST_TAG
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,6 +48,37 @@ class UpiQrScreenTest {
         composeTestRule.onNodeWithText("uniquemakeover@upi").assertIsDisplayed()
         composeTestRule.onNodeWithTag(QR_CANVAS_TEST_TAG).assertIsDisplayed()
         composeTestRule.onNodeWithText("Pooja - Balance Payment").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Send Payment Link on WhatsApp").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun upiQrScreen_sendWhatsAppClick_invokesActionCallback() {
+        val dummyBitmap = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
+        val contentState = UpiQrUiState.Content(
+            qrBitmap = dummyBitmap,
+            upiUri = "upi://pay?pa=uniquemakeover@upi",
+            amount = 850,
+            note = "Pooja",
+            shopName = "Unique Makeover",
+            upiId = "uniquemakeover@upi"
+        )
+        var whatsappClicked = false
+
+        composeTestRule.setContent {
+            UniqueMakeoverTheme {
+                UpiQrScreen(
+                    uiState = contentState,
+                    actions = UpiQrActions(
+                        onSendWhatsAppClick = { whatsappClicked = true }
+                    )
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Send Payment Link on WhatsApp")
+            .performScrollTo()
+            .performClick()
+        assertTrue("WhatsApp button click should invoke action callback", whatsappClicked)
     }
 
     @Test

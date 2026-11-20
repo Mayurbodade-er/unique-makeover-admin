@@ -90,8 +90,19 @@ private fun NavGraphBuilder.coreNavDestinations(navController: NavHostController
     composable(Routes.Dashboard) {
         DashboardRoute(
             viewModel = hiltViewModel(),
-            onNavigateToUpiQr = { amount, rate, paid, clientName ->
-                navController.navigate(Routes.upiQr(amount, rate, paid, clientName))
+            onNavigateToUpiQr = { apt, amt ->
+                navController.navigate(
+                    Routes.upiQr(
+                        UpiQrArgs(
+                            amount = amt,
+                            rate = apt.rate,
+                            paid = apt.paid,
+                            clientName = apt.name,
+                            phone = apt.phone,
+                            services = apt.serviceSnapshot
+                        )
+                    )
+                )
             }
         )
     }
@@ -150,6 +161,14 @@ private fun NavGraphBuilder.upiNavDestination(navController: NavHostController) 
                 defaultValue = 0
             },
             navArgument("clientName") {
+                type = NavType.StringType
+                defaultValue = ""
+            },
+            navArgument("phone") {
+                type = NavType.StringType
+                defaultValue = ""
+            },
+            navArgument("services") {
                 type = NavType.StringType
                 defaultValue = ""
             }

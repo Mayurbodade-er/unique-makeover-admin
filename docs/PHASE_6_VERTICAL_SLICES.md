@@ -485,16 +485,44 @@ class BuildUpiWhatsAppMessageUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`UpiMessageUrlEncodingTest.kt`:** Verifies multiline message with raw `upi://` URI passes `Uri.encode()` without truncation.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/BuildUpiWhatsAppMessageUseCase.kt
-app/src/test/java/com/uniquemakeover/admin/feature/upi/domain/usecase/BuildUpiWhatsAppMessageUseCaseTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreen.kt (Adds Send WhatsApp Link button)
-app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModel.kt (Wires launchWhatsAppPaymentRequest)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/launcher/UpiWhatsAppLauncher.kt`
+   - **Architectural Role:** Domain Launcher Contract (`feature/upi/domain/launcher`)
+   - **Why Created:** Defines pure domain contract for dispatching WhatsApp payment request messages without creating cross-feature dependency on `feature/reminders` (enforcing Invariant 2).
+2. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/BuildUpiWhatsAppMessageUseCase.kt`
+   - **Architectural Role:** Domain UseCase (`feature/upi/domain/usecase`)
+   - **Why Created:** Generates personalized, offline-ready payment request text messages including client greeting, amount, service description, deep clickable `upi://pay` URI, and manual UPI transfer fallback.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/upi/domain/usecase/UpiUseCases.kt`
+   - **Architectural Role:** Domain UseCase Aggregator (`feature/upi/domain/usecase`)
+   - **Why Created:** Consolidates domain use case dependencies into an injected data class to keep `UpiQrViewModel` constructor parameters $< 7$, adhering to Detekt `LongParameterList` rules.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/upi/data/platform/UpiWhatsAppLauncherImpl.kt`
+   - **Architectural Role:** Data/Platform Implementation (`feature/upi/data/platform`)
+   - **Why Created:** Implements `UpiWhatsAppLauncher` via offline Android implicit intent (`Intent.ACTION_VIEW` targeting `https://wa.me/` or contact picker fallback) with zero network permissions.
+5. `app/src/test/java/com/uniquemakeover/admin/feature/upi/domain/usecase/BuildUpiWhatsAppMessageUseCaseTest.kt`
+   - **Architectural Role:** JVM Unit Test (`app/src/test/...`)
+   - **Why Created:** Asserts greeting formatting, service inclusion, valid `upi://pay` URI generation, and plain-text fallback instructions.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Bound `UpiWhatsAppLauncher` interface to `UpiWhatsAppLauncherImpl` implementation with `@Singleton` scope.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/appointments/presentation/payment/RecordPaymentDialog.kt`
+   - **Why Modified:** Updated `onShowQr` callback signature to accept full `Appointment` domain object and payment amount to propagate client name, phone, and services to QR screen.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt`
+   - **Why Modified:** Updated `onNavigateToUpiQr` invocation from `RecordPaymentDialog` to pass `appointment` and `amount`.
+4. `app/src/main/java/com/uniquemakeover/admin/navigation/Routes.kt`
+   - **Why Modified:** Added `UpiQrArgs` data class and updated `Routes.upiQr` to forward `phone` and `services` query arguments without exceeding parameter thresholds or line length limits.
+5. `app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt`
+   - **Why Modified:** Passed `phone` and `services` arguments in `DashboardRoute` navigation call and extracted them in `UpiQrRoute`.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModel.kt`
+   - **Why Modified:** Injected `UpiUseCases` and `UpiWhatsAppLauncher`, read `phone` and `services` from `SavedStateHandle`, and implemented `launchWhatsAppPaymentRequest()`.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreen.kt`
+   - **Why Modified:** Added Luxury Green `[💬 Send Payment Link on WhatsApp]` button (`WhatsAppGreen` `#25D366` / `WhatsAppDarkText` `#053618`), `UpiQrActions`, and snackbar host for dispatch errors.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrViewModelConfigTest.kt`
+   - **Why Modified:** Added unit tests verifying `launchWhatsAppPaymentRequest()` dispatches formatted message with UPI URI to WhatsApp launcher.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/upi/presentation/UpiQrScreenTest.kt`
+   - **Why Modified:** Added Compose tests verifying "Send Payment Link on WhatsApp" button visibility and click callback invocation.
 
 ---
 
