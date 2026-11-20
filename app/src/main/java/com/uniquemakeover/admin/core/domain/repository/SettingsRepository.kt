@@ -14,4 +14,6 @@ interface SettingsRepository {
     suspend fun updateSettings(settings: Settings): DataResult<Unit>
     suspend fun getCommunicationConfig(): CommunicationConfig
     suspend fun updateCommunicationConfig(config: CommunicationConfig): DataResult<Unit>
+    suspend fun getReminderTemplate(): String
+    suspend fun updateReminderTemplate(template: String): DataResult<Unit>
 }

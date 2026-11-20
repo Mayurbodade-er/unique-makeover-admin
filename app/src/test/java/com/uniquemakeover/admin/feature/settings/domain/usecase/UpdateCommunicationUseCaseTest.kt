@@ -86,5 +86,9 @@ class UpdateCommunicationUseCaseTest {
             savedCommunicationConfig = config
             return DataResult.Success(Unit)
         }
+
+        override suspend fun getReminderTemplate(): String = ""
+        override suspend fun updateReminderTemplate(template: String): DataResult<Unit> =
+            DataResult.Success(Unit)
     }
 }

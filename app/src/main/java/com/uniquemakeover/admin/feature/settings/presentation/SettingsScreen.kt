@@ -1,6 +1,5 @@
 package com.uniquemakeover.admin.feature.settings.presentation
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +34,7 @@ import com.uniquemakeover.admin.core.ui.theme.LuxuryGold
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
 import com.uniquemakeover.admin.feature.settings.presentation.sections.CommunicationSection
 import com.uniquemakeover.admin.feature.settings.presentation.sections.OperationsSection
+import com.uniquemakeover.admin.feature.settings.presentation.sections.ReminderTemplateSection
 
 @Composable
 fun SettingsRoute(
@@ -42,11 +42,17 @@ fun SettingsRoute(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val actions = remember(viewModel) {
+        SettingsActions(
+            onSaveOperations = viewModel::saveOperations,
+            onSaveCommunication = viewModel::saveCommunication,
+            onSaveReminderTemplate = viewModel::saveReminderTemplate,
+            onClearMessages = viewModel::clearMessages
+        )
+    }
     SettingsScreen(
         uiState = uiState,
-        onSaveOperations = viewModel::saveOperations,
-        onSaveCommunication = viewModel::saveCommunication,
-        onClearMessages = viewModel::clearMessages,
+        actions = actions,
         modifier = modifier
     )
 }
@@ -54,9 +60,7 @@ fun SettingsRoute(
 @Composable
 fun SettingsScreen(
     uiState: SettingsUiState,
-    onSaveOperations: (String, String, Int, String) -> Unit,
-    onSaveCommunication: (String, String) -> Unit = { _, _ -> },
-    onClearMessages: () -> Unit = {},
+    actions: SettingsActions = SettingsActions(),
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -65,7 +69,7 @@ fun SettingsScreen(
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let {
             snackbarHostState.showSnackbar(it.asString(context))
-            onClearMessages()
+            actions.onClearMessages()
         }
     }
 
@@ -86,32 +90,52 @@ fun SettingsScreen(
                     color = LuxuryGold
                 )
             } else {
-                val errorString = uiState.errorMessage?.asString(context)
-                val commsErrorString = uiState.commsErrorMessage?.asString(context)
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    OperationsSection(
-                        initialConfig = uiState.operationsConfig,
-                        onSaveOperations = onSaveOperations,
-                        errorMessage = errorString
-                    )
-
-                    HorizontalDivider(
-                        color = BorderLine,
-                        thickness = 1.dp
-                    )
-
-                    CommunicationSection(
-                        initialConfig = uiState.communicationConfig,
-                        onSaveCommunication = onSaveCommunication,
-                        errorMessage = commsErrorString
-                    )
-                }
+                SettingsContent(
+                    uiState = uiState,
+                    actions = actions
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun SettingsContent(
+    uiState: SettingsUiState,
+    actions: SettingsActions,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val errorString = uiState.errorMessage?.asString(context)
+    val commsErrorString = uiState.commsErrorMessage?.asString(context)
+    val templateErrorString = uiState.templateErrorMessage?.asString(context)
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        OperationsSection(
+            initialConfig = uiState.operationsConfig,
+            onSaveOperations = actions.onSaveOperations,
+            errorMessage = errorString
+        )
+
+        HorizontalDivider(color = BorderLine, thickness = 1.dp)
+
+        CommunicationSection(
+            initialConfig = uiState.communicationConfig,
+            onSaveCommunication = actions.onSaveCommunication,
+            errorMessage = commsErrorString
+        )
+
+        HorizontalDivider(color = BorderLine, thickness = 1.dp)
+
+        ReminderTemplateSection(
+            initialTemplate = uiState.reminderTemplate,
+            onSaveTemplate = actions.onSaveReminderTemplate,
+            errorMessage = templateErrorString
+        )
     }
 }
 

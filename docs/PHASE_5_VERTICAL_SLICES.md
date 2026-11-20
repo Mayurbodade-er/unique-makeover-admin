@@ -227,19 +227,59 @@ class FormatReminderTemplateUseCase @Inject constructor() {
 ### 11. Internal Contract / Boundary Tests
 * **`TemplateUrlEncodingTest.kt`:** Verifies that formatted message containing ampersands (`&`), hash symbols (`#`), and spaces passes `Uri.encode()` with 100% fidelity.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/model/TemplateTokens.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/FormatReminderTemplateUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/components/ReminderPreviewCard.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/ReminderTemplateSection.kt
-app/src/test/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/FormatReminderTemplateUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/reminders/util/TemplateUrlEncodingTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsScreen.kt (Integrates ReminderTemplateSection)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/model/TemplateTokens.kt`
+   - **Architectural Role:** Domain Model / Constants (Reminders)
+   - **Why Created:** Pure Kotlin object defining the 8 reminder placeholder tokens (`{name}`, `{shop}`, `{service}`, `{date}`, `{time}`, `{rate}`, `{due}`, `{shopnum}`) and the factory default message template without Android framework dependencies.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/FormatReminderTemplateUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Encapsulates the token replacement business logic, substituting all 8 tokens from `Appointment` and `Settings` models while gracefully retaining unrecognized tokens and properly formatting calculated balance due amounts.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/GetReminderTemplateUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Retrieves the persisted WhatsApp reminder template string from `SettingsRepository`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateReminderTemplateUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Validates that template text is not blank or whitespace-only before persisting updates to SQLite via `SettingsRepository`.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/components/ReminderPreviewCard.kt`
+   - **Architectural Role:** Presentation (Compose Component)
+   - **Why Created:** Renders a luxury WhatsApp-styled chat bubble preview with double blue tick delivery status reflecting dynamic token substitution in real-time adhering to `desing.md`.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/ReminderTemplateSection.kt`
+   - **Architectural Role:** Presentation (Compose UI Component)
+   - **Why Created:** Provides multiline template text editing, 1-tap token chip insertion row, unrecognized token warning indicators, and reset to factory default template button with >=48dp touch targets.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsActions.kt`
+   - **Architectural Role:** Presentation (UI Actions Contract)
+   - **Why Created:** Bundles user interaction callbacks into an immutable actions data class, avoiding long parameter lists and decoupling UI events from the composable screen structure.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/FormatReminderTemplateUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies deterministic replacement of all 8 tokens, zero-balance handling, emoji preservation, and tolerant behavior for unknown placeholder tokens.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/reminders/util/TemplateUrlEncodingTest.kt`
+   - **Architectural Role:** Automated JVM Contract Test
+   - **Why Created:** Verifies UTF-8 URL encoding fidelity for WhatsApp URL scheme parameters with ampersands, spaces, emojis, and Marathi Devanagari script.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateReminderTemplateUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies validation rules of `UpdateReminderTemplateUseCase` rejecting blank templates and saving trimmed valid templates.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/domain/repository/SettingsRepository.kt`
+   - **Why Modified:** Added repository interface contracts `suspend fun getReminderTemplate(): String` and `suspend fun updateReminderTemplate(template: String): DataResult<Unit>`.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/settings/data/repository/SettingsRepositoryImpl.kt`
+   - **Why Modified:** Implemented reading and writing `msg` column in SQLite singleton `settings` table on `@IoDispatcher` with fallback to default template.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsUiState.kt`
+   - **Why Modified:** Extended `SettingsUiState` with `reminderTemplate: String` and `templateErrorMessage: UiText?`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsViewModel.kt`
+   - **Why Modified:** Injected `GetReminderTemplateUseCase` and `UpdateReminderTemplateUseCase`, adding `saveReminderTemplate(template)` and clearing template errors.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsScreen.kt`
+   - **Why Modified:** Integrated `ReminderTemplateSection` beneath communication settings in `SettingsScreen`.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsViewModelTest.kt`
+   - **Why Modified:** Added unit tests verifying reminder template loading and persistence behavior.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/domain/usecase/GenerateAvailableSlotsUseCaseTest.kt`
+   - **Why Modified:** Added template stubs to `FakeSettingsRepository`.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/AppointmentsViewModelTest.kt`
+   - **Why Modified:** Added template stubs to `FakeSettingsRepository`.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/appointments/presentation/booking/BookingViewModelTest.kt`
+   - **Why Modified:** Added template stubs to `FakeSettingsRepository`.
 
 ---
 

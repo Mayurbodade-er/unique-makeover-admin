@@ -6,8 +6,10 @@ import com.uniquemakeover.admin.core.common.UiText
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetCommunicationConfigUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetOperationsConfigUseCase
+import com.uniquemakeover.admin.feature.settings.domain.usecase.GetReminderTemplateUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateCommunicationUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateOperationsUseCase
+import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateReminderTemplateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +23,9 @@ class SettingsViewModel @Inject constructor(
     private val getOperationsConfigUseCase: GetOperationsConfigUseCase,
     private val updateOperationsUseCase: UpdateOperationsUseCase,
     private val getCommunicationConfigUseCase: GetCommunicationConfigUseCase,
-    private val updateCommunicationUseCase: UpdateCommunicationUseCase
+    private val updateCommunicationUseCase: UpdateCommunicationUseCase,
+    private val getReminderTemplateUseCase: GetReminderTemplateUseCase,
+    private val updateReminderTemplateUseCase: UpdateReminderTemplateUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -36,11 +40,13 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             val operationsConfig = getOperationsConfigUseCase()
             val commsConfig = getCommunicationConfigUseCase()
+            val template = getReminderTemplateUseCase()
             _uiState.update {
                 it.copy(
                     isLoading = false,
                     operationsConfig = operationsConfig,
-                    communicationConfig = commsConfig
+                    communicationConfig = commsConfig,
+                    reminderTemplate = template
                 )
             }
         }
@@ -106,7 +112,40 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun saveReminderTemplate(template: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(templateErrorMessage = null, successMessage = null) }
+            when (val result = updateReminderTemplateUseCase(template)) {
+                is DataResult.Success -> {
+                    val updatedTemplate = getReminderTemplateUseCase()
+                    _uiState.update {
+                        it.copy(
+                            reminderTemplate = updatedTemplate,
+                            successMessage = UiText.DynamicString("Reminder template saved"),
+                            templateErrorMessage = null
+                        )
+                    }
+                }
+                is DataResult.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            templateErrorMessage = result.message,
+                            successMessage = null
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     fun clearMessages() {
-        _uiState.update { it.copy(errorMessage = null, commsErrorMessage = null, successMessage = null) }
+        _uiState.update {
+            it.copy(
+                errorMessage = null,
+                commsErrorMessage = null,
+                templateErrorMessage = null,
+                successMessage = null
+            )
+        }
     }
 }

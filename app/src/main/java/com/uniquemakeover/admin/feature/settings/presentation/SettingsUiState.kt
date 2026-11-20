@@ -8,7 +8,9 @@ data class SettingsUiState(
     val isLoading: Boolean = false,
     val operationsConfig: OperationsConfig = OperationsConfig(),
     val communicationConfig: CommunicationConfig = CommunicationConfig(),
+    val reminderTemplate: String = "",
     val errorMessage: UiText? = null,
     val commsErrorMessage: UiText? = null,
+    val templateErrorMessage: UiText? = null,
     val successMessage: UiText? = null
 )

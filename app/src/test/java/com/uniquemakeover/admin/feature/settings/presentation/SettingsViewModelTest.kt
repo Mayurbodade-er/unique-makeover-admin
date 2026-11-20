@@ -8,8 +8,10 @@ import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.core.util.PhoneSanitizer
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetCommunicationConfigUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetOperationsConfigUseCase
+import com.uniquemakeover.admin.feature.settings.domain.usecase.GetReminderTemplateUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateCommunicationUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateOperationsUseCase
+import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateReminderTemplateUseCase
 import com.uniquemakeover.admin.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -35,6 +37,8 @@ class SettingsViewModelTest {
     private lateinit var updateOperationsUseCase: UpdateOperationsUseCase
     private lateinit var getCommunicationConfigUseCase: GetCommunicationConfigUseCase
     private lateinit var updateCommunicationUseCase: UpdateCommunicationUseCase
+    private lateinit var getReminderTemplateUseCase: GetReminderTemplateUseCase
+    private lateinit var updateReminderTemplateUseCase: UpdateReminderTemplateUseCase
     private lateinit var viewModel: SettingsViewModel
 
     @Before
@@ -45,11 +49,15 @@ class SettingsViewModelTest {
         updateOperationsUseCase = UpdateOperationsUseCase(fakeRepository)
         getCommunicationConfigUseCase = GetCommunicationConfigUseCase(fakeRepository)
         updateCommunicationUseCase = UpdateCommunicationUseCase(fakeRepository, phoneSanitizer)
+        getReminderTemplateUseCase = GetReminderTemplateUseCase(fakeRepository)
+        updateReminderTemplateUseCase = UpdateReminderTemplateUseCase(fakeRepository)
         viewModel = SettingsViewModel(
             getOperationsConfigUseCase = getOperationsConfigUseCase,
             updateOperationsUseCase = updateOperationsUseCase,
             getCommunicationConfigUseCase = getCommunicationConfigUseCase,
-            updateCommunicationUseCase = updateCommunicationUseCase
+            updateCommunicationUseCase = updateCommunicationUseCase,
+            getReminderTemplateUseCase = getReminderTemplateUseCase,
+            updateReminderTemplateUseCase = updateReminderTemplateUseCase
         )
     }
 
@@ -63,6 +71,7 @@ class SettingsViewModelTest {
         assertEquals(listOf("Sunita", "Pooja"), state.operationsConfig.staffList)
         assertEquals("9822001122", state.communicationConfig.whatsappNumber)
         assertEquals("uniquemakeover@upi", state.communicationConfig.merchantUpiId)
+        assertEquals("Hello {name}, your appointment at {shop} is on {date}.", state.reminderTemplate)
     }
 
     @Test
@@ -116,6 +125,29 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun saveReminderTemplate_validInput_updatesStateAndSetsSuccessMessage() = runTest {
+        advanceUntilIdle()
+        viewModel.saveReminderTemplate("Hello {name}, your appointment at {shop} is confirmed!")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.templateErrorMessage)
+        assertNotNull(state.successMessage)
+        assertEquals("Hello {name}, your appointment at {shop} is confirmed!", state.reminderTemplate)
+    }
+
+    @Test
+    fun saveReminderTemplate_emptyInput_setsErrorMessage() = runTest {
+        advanceUntilIdle()
+        viewModel.saveReminderTemplate("   ")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNotNull(state.templateErrorMessage)
+        assertNull(state.successMessage)
+    }
+
+    @Test
     fun clearMessages_clearsBothSuccessAndError() = runTest {
         advanceUntilIdle()
         viewModel.saveOperations("19:00", "10:00", 30, "Sunita")
@@ -125,6 +157,7 @@ class SettingsViewModelTest {
         viewModel.clearMessages()
         assertNull(viewModel.uiState.value.errorMessage)
         assertNull(viewModel.uiState.value.commsErrorMessage)
+        assertNull(viewModel.uiState.value.templateErrorMessage)
         assertNull(viewModel.uiState.value.successMessage)
     }
 
@@ -152,6 +185,13 @@ class SettingsViewModelTest {
         override suspend fun getCommunicationConfig(): CommunicationConfig = commsConfig
         override suspend fun updateCommunicationConfig(config: CommunicationConfig): DataResult<Unit> {
             commsConfig = config
+            return DataResult.Success(Unit)
+        }
+
+        var reminderTemplate: String = "Hello {name}, your appointment at {shop} is on {date}."
+        override suspend fun getReminderTemplate(): String = reminderTemplate
+        override suspend fun updateReminderTemplate(template: String): DataResult<Unit> {
+            reminderTemplate = template
             return DataResult.Success(Unit)
         }
     }

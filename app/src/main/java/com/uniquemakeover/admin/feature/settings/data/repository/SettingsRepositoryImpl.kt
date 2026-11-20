@@ -10,6 +10,7 @@ import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
+import com.uniquemakeover.admin.feature.reminders.domain.model.TemplateTokens
 import com.uniquemakeover.admin.feature.settings.data.mapper.toDomain
 import com.uniquemakeover.admin.feature.settings.data.mapper.toEntity
 import com.uniquemakeover.admin.feature.settings.data.mapper.toOperationsConfig
@@ -116,6 +117,33 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getReminderTemplate(): String {
+        return withContext(ioDispatcher) {
+            val entity = settingsDao.getSettingsSync() ?: createDefaultSettingsEntity()
+            if (entity.msg.isNotBlank() && entity.msg.contains("{")) {
+                entity.msg
+            } else {
+                TemplateTokens.DEFAULT_TEMPLATE
+            }
+        }
+    }
+
+    override suspend fun updateReminderTemplate(template: String): DataResult<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                val current = settingsDao.getSettingsSync() ?: createDefaultSettingsEntity()
+                val updated = current.copy(msg = template)
+                settingsDao.upsert(updated)
+                DataResult.Success(Unit)
+            } catch (e: SQLiteException) {
+                DataResult.Error(
+                    UiText.DynamicString(e.localizedMessage ?: "Failed to save reminder template"),
+                    e
+                )
+            }
+        }
+    }
+
     private fun createDefaultSettingsEntity(): SettingsEntity {
         return SettingsEntity(
             id = 1,
@@ -130,7 +158,7 @@ class SettingsRepositoryImpl @Inject constructor(
             open = "10:00",
             close = "20:00",
             slot = 30,
-            msg = "Reminder: Your appointment at Unique Makeover is scheduled for tomorrow."
+            msg = TemplateTokens.DEFAULT_TEMPLATE
         )
     }
 }

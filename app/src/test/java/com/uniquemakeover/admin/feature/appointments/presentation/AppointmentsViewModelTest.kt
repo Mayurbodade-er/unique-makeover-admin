@@ -184,6 +184,9 @@ class AppointmentsViewModelTest {
             CommunicationConfig("", "")
         override suspend fun updateCommunicationConfig(config: CommunicationConfig): DataResult<Unit> =
             DataResult.Success(Unit)
+        override suspend fun getReminderTemplate(): String = ""
+        override suspend fun updateReminderTemplate(template: String): DataResult<Unit> =
+            DataResult.Success(Unit)
     }
 
     private class FakeSlotRepository : SlotRepository {

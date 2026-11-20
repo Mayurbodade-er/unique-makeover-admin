@@ -37,7 +37,9 @@ class SettingsScreenTest {
             UniqueMakeoverTheme {
                 SettingsScreen(
                     uiState = uiState,
-                    onSaveOperations = { _, _, _, _ -> }
+                    actions = SettingsActions(
+                        onSaveOperations = { _, _, _, _ -> }
+                    )
                 )
             }
         }
@@ -70,11 +72,13 @@ class SettingsScreenTest {
             UniqueMakeoverTheme {
                 SettingsScreen(
                     uiState = uiState,
-                    onSaveOperations = { open, close, _, _ ->
-                        clicked = true
-                        savedOpen = open
-                        savedClose = close
-                    }
+                    actions = SettingsActions(
+                        onSaveOperations = { open, close, _, _ ->
+                            clicked = true
+                            savedOpen = open
+                            savedClose = close
+                        }
+                    )
                 )
             }
         }
