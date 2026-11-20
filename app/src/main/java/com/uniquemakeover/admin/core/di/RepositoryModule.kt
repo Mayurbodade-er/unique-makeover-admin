@@ -14,7 +14,9 @@ import com.uniquemakeover.admin.feature.auth.domain.repository.PinRepository
 import com.uniquemakeover.admin.feature.clients.data.repository.ClientNoteRepositoryImpl
 import com.uniquemakeover.admin.feature.clients.data.repository.ClientProfileRepositoryImpl
 import com.uniquemakeover.admin.feature.clients.domain.repository.ClientProfileRepository
+import com.uniquemakeover.admin.feature.reminders.data.platform.WhatsAppLauncherImpl
 import com.uniquemakeover.admin.feature.reminders.data.repository.RemindersRepositoryImpl
+import com.uniquemakeover.admin.feature.reminders.domain.launcher.WhatsAppLauncher
 import com.uniquemakeover.admin.feature.reminders.domain.repository.RemindersRepository
 import com.uniquemakeover.admin.feature.services.data.image.LocalImageStore
 import com.uniquemakeover.admin.feature.services.data.repository.ServiceRepositoryImpl
@@ -89,4 +91,10 @@ abstract class RepositoryModule {
     abstract fun bindRemindersRepository(
         remindersRepositoryImpl: RemindersRepositoryImpl
     ): RemindersRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWhatsAppLauncher(
+        whatsAppLauncherImpl: WhatsAppLauncherImpl
+    ): WhatsAppLauncher
 }

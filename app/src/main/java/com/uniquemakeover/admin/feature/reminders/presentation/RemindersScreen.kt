@@ -6,10 +6,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +16,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -26,18 +26,27 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uniquemakeover.admin.core.ui.theme.BrandPrimary
 import com.uniquemakeover.admin.core.ui.theme.LuxuryGold
@@ -56,9 +65,18 @@ fun RemindersRoute(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val actions = remember(viewModel) {
+        RemindersActions(
+            onRemindClick = viewModel::sendReminder,
+            onMarkNotSent = viewModel::markAsNotSent,
+            onUndoClick = viewModel::undoLastReminder,
+            onDismissSnackbar = viewModel::dismissSnackbar,
+            onDismissClipboardDialog = viewModel::dismissClipboardDialog
+        )
+    }
     RemindersScreen(
         uiState = uiState,
-        onRemindClick = { /* Dispatched in Slice 24 */ },
+        actions = actions,
         modifier = modifier
     )
 }
@@ -66,41 +84,105 @@ fun RemindersRoute(
 @Composable
 fun RemindersScreen(
     uiState: RemindersUiState,
-    onRemindClick: (ReminderQueueItem) -> Unit = {},
+    actions: RemindersActions = RemindersActions(),
     modifier: Modifier = Modifier
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    LaunchedEffect(uiState.snackbarMessage) {
+        uiState.snackbarMessage?.let { msg ->
+            val result = snackbarHostState.showSnackbar(
+                message = msg.asString(context),
+                actionLabel = "Undo",
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                actions.onUndoClick()
+            }
+            actions.onDismissSnackbar()
+        }
+    }
+
+    if (uiState.showClipboardFallbackDialog) {
+        ClipboardFallbackDialog(
+            message = uiState.clipboardMessage,
+            onDismiss = actions.onDismissClipboardDialog
+        )
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = WarmBackground,
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = { RemindersTopBar() }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            when {
-                uiState.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = LuxuryGold
-                    )
-                }
-                uiState.queue.isEmpty() -> {
-                    EmptyRemindersView(
-                        tomorrowDate = uiState.tomorrowDateDisplay,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                else -> {
-                    RemindersQueueList(
-                        uiState = uiState,
-                        onRemindClick = onRemindClick
-                    )
-                }
+        RemindersBodyContent(
+            uiState = uiState,
+            actions = actions,
+            modifier = Modifier.padding(innerPadding)
+        )
+    }
+}
+
+@Composable
+private fun RemindersBodyContent(
+    uiState: RemindersUiState,
+    actions: RemindersActions,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        when {
+            uiState.isLoading -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = LuxuryGold
+                )
+            }
+            uiState.queue.isEmpty() -> {
+                EmptyRemindersView(
+                    tomorrowDate = uiState.tomorrowDateDisplay,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+            else -> {
+                RemindersQueueList(
+                    uiState = uiState,
+                    actions = actions
+                )
             }
         }
     }
+}
+
+@Composable
+private fun ClipboardFallbackDialog(
+    message: String,
+    onDismiss: () -> Unit
+) {
+    val clipboardManager = LocalClipboardManager.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("WhatsApp Not Installed") },
+        text = {
+            Text("WhatsApp is not installed on this device. Would you like to copy the reminder message to clipboard?")
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(message))
+                    onDismiss()
+                }
+            ) {
+                Text("Copy Message")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -124,7 +206,7 @@ private fun RemindersTopBar() {
 @Composable
 private fun RemindersQueueList(
     uiState: RemindersUiState,
-    onRemindClick: (ReminderQueueItem) -> Unit
+    actions: RemindersActions
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -140,7 +222,8 @@ private fun RemindersQueueList(
         ) { item ->
             ReminderRow(
                 item = item,
-                onRemindClick = onRemindClick
+                onRemindClick = actions.onRemindClick,
+                onMarkNotSent = actions.onMarkNotSent
             )
         }
     }

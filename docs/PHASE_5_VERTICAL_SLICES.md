@@ -528,23 +528,53 @@ class UndoMarkRemindedUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`ActivityNotFoundContractTest.kt`:** Simulates missing WhatsApp package; verifies clipboard fallback dialog appears.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/data/platform/WhatsAppLauncher.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/data/platform/WhatsAppLauncherImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/LaunchWhatsAppReminderUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/MarkRemindedUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/UndoMarkRemindedUseCase.kt
-app/src/test/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/LaunchWhatsAppReminderUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/UndoMarkRemindedUseCaseTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/reminders/data/WhatsAppLauncherInstrumentedTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersScreenTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/database/dao/AppointmentDao.kt (Adds updateRemindedStatus)
-app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersViewModel.kt (Integrates launch & undo actions)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/launcher/WhatsAppLauncher.kt`
+   - **Architectural Role:** Domain Platform Adapter Interface
+   - **Why Created:** Inversion-of-control contract allowing domain use cases to request external WhatsApp intent launches without importing Android framework classes.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/data/platform/WhatsAppLauncherImpl.kt`
+   - **Architectural Role:** Platform Data Implementation
+   - **Why Created:** Formats Indian telephone prefixes (+91), percent-encodes dynamic messages via UTF-8, and safely launches `Intent.ACTION_VIEW` targeting `wa.me` with `ActivityNotFoundException` resilience.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/LaunchWhatsAppReminderUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Orchestrates reminder message preparation, token substitution via `FormatReminderTemplateUseCase`, platform intent dispatch, and optimistic status persistence in Room.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/MarkRemindedUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Single-responsibility use case writing the reminder ISO date stamp to SQLite.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/UndoMarkRemindedUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Reverts the appointment's `reminded` timestamp to `null`, providing instant rollback via snackbar or manual row context action.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersActions.kt`
+   - **Architectural Role:** Presentation (UI Actions Contract)
+   - **Why Created:** Bundles reminder screen callbacks (`onRemindClick`, `onMarkNotSent`, `onUndoClick`, snackbar and clipboard dialog dismissals) into an immutable object to satisfy parameter limits.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/LaunchWhatsAppReminderUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies message formatting, intent dispatch delegation, and atomic optimistic status persistence.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/reminders/domain/usecase/UndoMarkRemindedUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies that undo correctly passes the target appointment ID to the repository.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/reminders/data/platform/WhatsAppLauncherTest.kt`
+   - **Architectural Role:** Automated JVM Platform Integration Test
+   - **Why Created:** Inspects shadow activity intents via Robolectric to guarantee `ACTION_VIEW` action, RFC 3986 percent encoding, and +91 phone sanitization.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersScreenTest.kt`
+   - **Architectural Role:** Automated JVM Compose UI Test
+   - **Why Created:** Simulates UI user interactions, asserting empty queue banners and verifying that tapping `[💬 Remind]` triggers callback dispatch.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Bound `WhatsAppLauncher` to `WhatsAppLauncherImpl` in Hilt DI container.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersUiState.kt`
+   - **Why Modified:** Added fields for `lastRemindedAppointmentId`, `snackbarMessage`, and clipboard fallback dialog state.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersViewModel.kt`
+   - **Why Modified:** Injected `LaunchWhatsAppReminderUseCase` and `UndoMarkRemindedUseCase`, adding `sendReminder`, `undoLastReminder`, `markAsNotSent`, and dialog controllers.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/components/ReminderRow.kt`
+   - **Why Modified:** Added `ReminderRowOverflowMenu` allowing manual "Mark as Not Sent" reset per AC-REM-02.4.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersScreen.kt`
+   - **Why Modified:** Integrated `SnackbarHostState` with "Undo" action and clipboard fallback `AlertDialog`.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/reminders/presentation/RemindersViewModelTest.kt`
+   - **Why Modified:** Added ViewModel test cases for optimistic snackbar triggers and undo operations.
 
 ---
 

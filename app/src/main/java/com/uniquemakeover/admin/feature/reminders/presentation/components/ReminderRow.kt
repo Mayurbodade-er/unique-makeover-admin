@@ -9,21 +9,31 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Undo
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.uniquemakeover.admin.core.ui.theme.BorderLine
 import com.uniquemakeover.admin.core.ui.theme.BrandPrimary
 import com.uniquemakeover.admin.core.ui.theme.SuccessOk
 import com.uniquemakeover.admin.core.ui.theme.TextMuted
@@ -41,6 +51,7 @@ private val MinTouchTargetHeight = 48.dp
 fun ReminderRow(
     item: ReminderQueueItem,
     onRemindClick: (ReminderQueueItem) -> Unit,
+    onMarkNotSent: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -59,7 +70,18 @@ fun ReminderRow(
                 verticalAlignment = Alignment.Top
             ) {
                 ReminderClientInfo(item = item)
-                ReminderStatusBadge(isReminded = item.isReminded)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    ReminderStatusBadge(isReminded = item.isReminded)
+                    if (item.isReminded) {
+                        ReminderRowOverflowMenu(
+                            appointmentId = item.appointment.id,
+                            onMarkNotSent = onMarkNotSent
+                        )
+                    }
+                }
             }
 
             ReminderServiceAndDueInfo(item = item)
@@ -67,6 +89,44 @@ fun ReminderRow(
             ReminderActionButton(
                 isReminded = item.isReminded,
                 onClick = { onRemindClick(item) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReminderRowOverflowMenu(
+    appointmentId: String,
+    onMarkNotSent: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.heightIn(min = MinTouchTargetHeight)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.MoreVert,
+                contentDescription = "Options",
+                tint = TextMuted
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Mark as Not Sent") },
+                onClick = {
+                    expanded = false
+                    onMarkNotSent(appointmentId)
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.Undo,
+                        contentDescription = null
+                    )
+                }
             )
         }
     }
@@ -198,7 +258,7 @@ private fun ReminderActionButton(
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = WhatsAppGreen)
         ) {
-            Text("Resend Reminder ↺", fontWeight = FontWeight.Bold)
+            Text("✓ Reminded • Resend ↺", fontWeight = FontWeight.Bold)
         }
     } else {
         Button(
