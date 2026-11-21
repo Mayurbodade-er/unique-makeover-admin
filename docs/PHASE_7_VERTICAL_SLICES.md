@@ -587,20 +587,47 @@ class ChangePinUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **Keystore Key Re-Encryption Test:** Verifies that a newly generated salt produces a completely distinct PBKDF2 hash.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/model/ChangePinResult.kt
-app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/usecase/ChangePinUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/AccessControlSection.kt
-app/src/test/java/com/uniquemakeover/admin/feature/auth/domain/usecase/ChangePinUseCaseTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/auth/data/ChangePinIntegrationTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/repository/PinRepository.kt (Adds changePin)
-app/src/main/java/com/uniquemakeover/admin/feature/auth/data/PinRepositoryImpl.kt (Implements changePin)
-app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsScreen.kt (Integrates AccessControlSection)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/model/ChangePinResult.kt`
+   - **Architectural Role:** Domain Model (Auth / Access Control)
+   - **Why Created:** Defines sealed domain outcomes of PIN modification attempts (`Success`, `IncorrectCurrentPin`, `PinsDoNotMatch`, `SameAsCurrentPin`, `Error(message)`), keeping domain callers completely decoupled from UI or database logic.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/usecase/ChangePinUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Implements master security business rules for changing PIN: validates 4-digit numeric constraints, guards against identical new PINs, ensures confirmation matches, verifies current credentials via `PinRepository.verifyPin()`, and detects trivial/weak PIN sequences.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/AccessControlSection.kt`
+   - **Architectural Role:** Presentation (Compose UI Component)
+   - **Why Created:** Renders the Security & Access Control card inside Salon Settings with status indicator, "Change PIN" action button, two-step credential dialog with inline validation, and weak PIN confirmation alerts adhering to `desing.md`.
+4. `app/src/test/java/com/uniquemakeover/admin/feature/auth/domain/usecase/ChangePinUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies domain business logic of `ChangePinUseCase`: format checks, identical PIN rejection, mismatched confirmation, incorrect current PIN rejection, and weak PIN detection.
+5. `app/src/test/java/com/uniquemakeover/admin/feature/auth/data/ChangePinIntegrationTest.kt`
+   - **Architectural Role:** Robolectric Integration Test
+   - **Why Created:** Tests full cryptographic cycle: verifies default PIN `1234`, executes `ChangePinUseCase("1234", "8899", "8899")`, asserts Keystore updates, verifies `1234` fails, verifies `8899` succeeds, and confirms Room `SettingsEntity.adminPinHash` is synchronized.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/settings/presentation/sections/AccessControlSectionTest.kt`
+   - **Architectural Role:** Compose UI Unit Test
+   - **Why Created:** Tests `AccessControlSection` UI interactions: card rendering, opening Change PIN dialog, input validation, and submission callback.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/security/PinLockManager.kt`
+   - **Why Modified:** Updated `setPin(newPin)` to return the computed PBKDF2 hash for Room SQLite synchronization.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/auth/data/PinRepositoryImpl.kt`
+   - **Why Modified:** Injected `SettingsDao` and updated `changePin(newPin)` to update Keystore and synchronize `adminPinHash` in Room database.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/SettingsUseCases.kt`
+   - **Why Modified:** Injected `ChangePinUseCase` into `SettingsUseCases` bundle to expose PIN modification capabilities to `SettingsViewModel`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsUiState.kt`
+   - **Why Modified:** Added `pinErrorMessage: UiText?` and `isChangePinSuccess: Boolean` to state representation.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsActions.kt`
+   - **Why Modified:** Added `onChangePin: (current: String, new: String, confirm: String) -> Unit` action callback.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsViewModel.kt`
+   - **Why Modified:** Added `changePin(current, new, confirm)` and `handlePinResult(result)` to process PIN modifications and post success or error messages.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsScreen.kt`
+   - **Why Modified:** Integrated `AccessControlSection` into settings content scroll stream and wired `onChangePin` callback to ViewModel.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsViewModelTest.kt`
+   - **Why Modified:** Updated test harness with `ChangePinUseCase` and added unit test cases for successful PIN change and error handling.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockoutIntegrationTest.kt`
+   - **Why Modified:** Updated `PinRepositoryImpl` instantiation with `fakeSettingsDao`.
 
 ---
 

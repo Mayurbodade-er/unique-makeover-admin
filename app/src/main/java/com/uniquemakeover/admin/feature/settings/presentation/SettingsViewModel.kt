@@ -190,6 +190,58 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun changePin(
+        currentPin: String,
+        newPin: String,
+        confirmPin: String
+    ) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    pinErrorMessage = null,
+                    successMessage = null,
+                    isChangePinSuccess = false
+                )
+            }
+            val result = settingsUseCases.changePin(currentPin, newPin, confirmPin)
+            handlePinResult(result)
+        }
+    }
+
+    private fun handlePinResult(result: com.uniquemakeover.admin.feature.auth.domain.model.ChangePinResult) {
+        when (result) {
+            is com.uniquemakeover.admin.feature.auth.domain.model.ChangePinResult.Success -> {
+                _uiState.update {
+                    it.copy(
+                        successMessage = UiText.DynamicString("PIN changed successfully"),
+                        pinErrorMessage = null,
+                        isChangePinSuccess = true
+                    )
+                }
+            }
+            is com.uniquemakeover.admin.feature.auth.domain.model.ChangePinResult.IncorrectCurrentPin -> {
+                _uiState.update {
+                    it.copy(pinErrorMessage = UiText.DynamicString("Incorrect current PIN"))
+                }
+            }
+            is com.uniquemakeover.admin.feature.auth.domain.model.ChangePinResult.PinsDoNotMatch -> {
+                _uiState.update {
+                    it.copy(pinErrorMessage = UiText.DynamicString("PINs do not match"))
+                }
+            }
+            is com.uniquemakeover.admin.feature.auth.domain.model.ChangePinResult.SameAsCurrentPin -> {
+                _uiState.update {
+                    it.copy(pinErrorMessage = UiText.DynamicString("New PIN must be different from current PIN"))
+                }
+            }
+            is com.uniquemakeover.admin.feature.auth.domain.model.ChangePinResult.Error -> {
+                _uiState.update {
+                    it.copy(pinErrorMessage = result.message)
+                }
+            }
+        }
+    }
+
     fun clearMessages() {
         _uiState.update {
             it.copy(
@@ -197,7 +249,9 @@ class SettingsViewModel @Inject constructor(
                 commsErrorMessage = null,
                 templateErrorMessage = null,
                 brandingErrorMessage = null,
-                successMessage = null
+                pinErrorMessage = null,
+                successMessage = null,
+                isChangePinSuccess = false
             )
         }
     }

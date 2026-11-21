@@ -15,5 +15,7 @@ data class SettingsUiState(
     val commsErrorMessage: UiText? = null,
     val templateErrorMessage: UiText? = null,
     val brandingErrorMessage: UiText? = null,
-    val successMessage: UiText? = null
+    val pinErrorMessage: UiText? = null,
+    val successMessage: UiText? = null,
+    val isChangePinSuccess: Boolean = false
 )

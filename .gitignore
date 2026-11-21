@@ -62,3 +62,6 @@ Thumbs.db
 
 # Detekt baseline
 detekt-baseline.xml
+
+# Kotlin daemon
+.kotlin/

@@ -6,6 +6,9 @@ import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.core.util.PhoneSanitizer
+import com.uniquemakeover.admin.feature.auth.domain.model.PinResult
+import com.uniquemakeover.admin.feature.auth.domain.repository.PinRepository
+import com.uniquemakeover.admin.feature.auth.domain.usecase.ChangePinUseCase
 import com.uniquemakeover.admin.feature.settings.domain.model.BrandingConfig
 import com.uniquemakeover.admin.feature.settings.domain.repository.BrandingStorageRepository
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetBrandingConfigUseCase
@@ -40,6 +43,7 @@ class SettingsViewModelTest {
     private lateinit var fakeRepository: FakeSettingsRepository
     private lateinit var fakeBrandingStorage: FakeBrandingStorageRepository
     private lateinit var phoneSanitizer: PhoneSanitizer
+    private val fakePinRepository = io.mockk.mockk<PinRepository>()
     private lateinit var viewModel: SettingsViewModel
 
     @Before
@@ -55,6 +59,7 @@ class SettingsViewModelTest {
         val updateReminderTemplateUseCase = UpdateReminderTemplateUseCase(fakeRepository)
         val getBrandingConfigUseCase = GetBrandingConfigUseCase(fakeRepository)
         val updateBrandingUseCase = UpdateBrandingUseCase(fakeRepository)
+        val changePinUseCase = ChangePinUseCase(fakePinRepository)
 
         val settingsUseCases = SettingsUseCases(
             getOperationsConfig = getOperationsConfigUseCase,
@@ -64,7 +69,8 @@ class SettingsViewModelTest {
             getReminderTemplate = getReminderTemplateUseCase,
             updateReminderTemplate = updateReminderTemplateUseCase,
             getBrandingConfig = getBrandingConfigUseCase,
-            updateBranding = updateBrandingUseCase
+            updateBranding = updateBrandingUseCase,
+            changePin = changePinUseCase
         )
 
         viewModel = SettingsViewModel(
@@ -295,5 +301,31 @@ class SettingsViewModelTest {
         assertNull(state.brandingConfig.wallpaperPath)
         assertTrue(fakeBrandingStorage.logoDeleted)
         assertTrue(fakeBrandingStorage.wallpaperDeleted)
+    }
+
+    @Test
+    fun changePin_success_updatesStateWithSuccessMessage() = runTest {
+        io.mockk.coEvery { fakePinRepository.verifyPin("1234") } returns PinResult.Success
+        io.mockk.coEvery { fakePinRepository.changePin("8899") } returns Unit
+
+        viewModel.changePin("1234", "8899", "8899")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isChangePinSuccess)
+        assertNotNull(state.successMessage)
+        assertNull(state.pinErrorMessage)
+    }
+
+    @Test
+    fun changePin_incorrectCurrent_updatesPinErrorMessage() = runTest {
+        io.mockk.coEvery { fakePinRepository.verifyPin("9999") } returns PinResult.Invalid
+
+        viewModel.changePin("9999", "8899", "8899")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(!state.isChangePinSuccess)
+        assertNotNull(state.pinErrorMessage)
     }
 }

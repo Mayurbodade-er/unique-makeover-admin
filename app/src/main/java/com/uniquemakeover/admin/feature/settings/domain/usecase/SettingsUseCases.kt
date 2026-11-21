@@ -1,5 +1,6 @@
 package com.uniquemakeover.admin.feature.settings.domain.usecase
 
+import com.uniquemakeover.admin.feature.auth.domain.usecase.ChangePinUseCase
 import javax.inject.Inject
 
 data class SettingsUseCases @Inject constructor(
@@ -10,5 +11,6 @@ data class SettingsUseCases @Inject constructor(
     val getReminderTemplate: GetReminderTemplateUseCase,
     val updateReminderTemplate: UpdateReminderTemplateUseCase,
     val getBrandingConfig: GetBrandingConfigUseCase,
-    val updateBranding: UpdateBrandingUseCase
+    val updateBranding: UpdateBrandingUseCase,
+    val changePin: ChangePinUseCase
 )

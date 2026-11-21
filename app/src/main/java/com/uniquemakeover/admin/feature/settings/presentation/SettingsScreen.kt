@@ -32,6 +32,7 @@ import com.uniquemakeover.admin.core.ui.theme.BorderLine
 import com.uniquemakeover.admin.core.ui.theme.BrandPrimary
 import com.uniquemakeover.admin.core.ui.theme.LuxuryGold
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
+import com.uniquemakeover.admin.feature.settings.presentation.sections.AccessControlSection
 import com.uniquemakeover.admin.feature.settings.presentation.sections.BrandingSection
 import com.uniquemakeover.admin.feature.settings.presentation.sections.CommunicationSection
 import com.uniquemakeover.admin.feature.settings.presentation.sections.OperationsSection
@@ -49,6 +50,7 @@ fun SettingsRoute(
             onSaveOperations = viewModel::saveOperations,
             onSaveCommunication = viewModel::saveCommunication,
             onSaveReminderTemplate = viewModel::saveReminderTemplate,
+            onChangePin = viewModel::changePin,
             onClearMessages = viewModel::clearMessages
         )
     }
@@ -112,6 +114,7 @@ private fun SettingsContent(
     val commsErrorString = uiState.commsErrorMessage?.asString(context)
     val templateErrorString = uiState.templateErrorMessage?.asString(context)
     val brandingErrorString = uiState.brandingErrorMessage?.asString(context)
+    val pinErrorString = uiState.pinErrorMessage?.asString(context)
 
     Column(
         modifier = modifier
@@ -123,6 +126,14 @@ private fun SettingsContent(
             onSaveBranding = actions.onSaveBranding,
             errorMessage = brandingErrorString,
             modifier = Modifier.padding(16.dp)
+        )
+
+        HorizontalDivider(color = BorderLine, thickness = 1.dp)
+
+        AccessControlSection(
+            onChangePin = actions.onChangePin,
+            errorMessage = pinErrorString,
+            isSuccess = uiState.isChangePinSuccess
         )
 
         HorizontalDivider(color = BorderLine, thickness = 1.dp)

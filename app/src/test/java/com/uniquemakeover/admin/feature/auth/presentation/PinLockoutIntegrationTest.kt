@@ -70,7 +70,8 @@ class PinLockoutIntegrationTest {
         )
 
         val testDispatcher = UnconfinedTestDispatcher()
-        pinRepository = PinRepositoryImpl(pinLockManager, testDispatcher)
+        val fakeSettingsDao = io.mockk.mockk<com.uniquemakeover.admin.core.database.dao.SettingsDao>(relaxed = true)
+        pinRepository = PinRepositoryImpl(pinLockManager, fakeSettingsDao, testDispatcher)
         verifyPinUseCase = VerifyPinUseCase(pinRepository)
         getLockoutStateUseCase = GetLockoutStateUseCase(pinRepository)
 

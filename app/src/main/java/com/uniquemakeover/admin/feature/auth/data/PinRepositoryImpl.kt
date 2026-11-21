@@ -1,5 +1,6 @@
 package com.uniquemakeover.admin.feature.auth.data
 
+import com.uniquemakeover.admin.core.database.dao.SettingsDao
 import com.uniquemakeover.admin.core.di.IoDispatcher
 import com.uniquemakeover.admin.core.security.PinLockManager
 import com.uniquemakeover.admin.feature.auth.domain.model.LockoutState
@@ -14,6 +15,7 @@ import javax.inject.Singleton
 @Singleton
 class PinRepositoryImpl @Inject constructor(
     private val pinLockManager: PinLockManager,
+    private val settingsDao: SettingsDao,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : PinRepository {
 
@@ -31,7 +33,11 @@ class PinRepositoryImpl @Inject constructor(
 
     override suspend fun changePin(newPin: String) {
         withContext(ioDispatcher) {
-            pinLockManager.setPin(newPin)
+            val hash = pinLockManager.setPin(newPin)
+            val settings = settingsDao.getSettingsSync()
+            if (settings != null) {
+                settingsDao.update(settings.copy(adminPinHash = hash))
+            }
         }
     }
 

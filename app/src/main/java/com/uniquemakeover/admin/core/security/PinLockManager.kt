@@ -142,9 +142,10 @@ class PinLockManager @Inject constructor(
         return pinHasher.verifyPin(DEFAULT_PIN, stored)
     }
 
-    fun setPin(newPin: String) {
+    fun setPin(newPin: String): String {
         val hash = pinHasher.hashPin(newPin)
         prefs.edit().putString(KEY_PIN_HASH, hash).apply()
+        return hash
     }
 
     private fun getOrInitStoredPinHash(): String {
