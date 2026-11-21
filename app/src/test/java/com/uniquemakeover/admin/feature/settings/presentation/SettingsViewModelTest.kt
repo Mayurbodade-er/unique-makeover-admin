@@ -6,9 +6,14 @@ import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.core.util.PhoneSanitizer
+import com.uniquemakeover.admin.feature.settings.domain.model.BrandingConfig
+import com.uniquemakeover.admin.feature.settings.domain.repository.BrandingStorageRepository
+import com.uniquemakeover.admin.feature.settings.domain.usecase.GetBrandingConfigUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetCommunicationConfigUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetOperationsConfigUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetReminderTemplateUseCase
+import com.uniquemakeover.admin.feature.settings.domain.usecase.SettingsUseCases
+import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateBrandingUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateCommunicationUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateOperationsUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateReminderTemplateUseCase
@@ -21,6 +26,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -32,32 +38,38 @@ class SettingsViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var fakeRepository: FakeSettingsRepository
+    private lateinit var fakeBrandingStorage: FakeBrandingStorageRepository
     private lateinit var phoneSanitizer: PhoneSanitizer
-    private lateinit var getOperationsConfigUseCase: GetOperationsConfigUseCase
-    private lateinit var updateOperationsUseCase: UpdateOperationsUseCase
-    private lateinit var getCommunicationConfigUseCase: GetCommunicationConfigUseCase
-    private lateinit var updateCommunicationUseCase: UpdateCommunicationUseCase
-    private lateinit var getReminderTemplateUseCase: GetReminderTemplateUseCase
-    private lateinit var updateReminderTemplateUseCase: UpdateReminderTemplateUseCase
     private lateinit var viewModel: SettingsViewModel
 
     @Before
     fun setUp() {
         fakeRepository = FakeSettingsRepository()
+        fakeBrandingStorage = FakeBrandingStorageRepository()
         phoneSanitizer = PhoneSanitizer()
-        getOperationsConfigUseCase = GetOperationsConfigUseCase(fakeRepository)
-        updateOperationsUseCase = UpdateOperationsUseCase(fakeRepository)
-        getCommunicationConfigUseCase = GetCommunicationConfigUseCase(fakeRepository)
-        updateCommunicationUseCase = UpdateCommunicationUseCase(fakeRepository, phoneSanitizer)
-        getReminderTemplateUseCase = GetReminderTemplateUseCase(fakeRepository)
-        updateReminderTemplateUseCase = UpdateReminderTemplateUseCase(fakeRepository)
+        val getOperationsConfigUseCase = GetOperationsConfigUseCase(fakeRepository)
+        val updateOperationsUseCase = UpdateOperationsUseCase(fakeRepository)
+        val getCommunicationConfigUseCase = GetCommunicationConfigUseCase(fakeRepository)
+        val updateCommunicationUseCase = UpdateCommunicationUseCase(fakeRepository, phoneSanitizer)
+        val getReminderTemplateUseCase = GetReminderTemplateUseCase(fakeRepository)
+        val updateReminderTemplateUseCase = UpdateReminderTemplateUseCase(fakeRepository)
+        val getBrandingConfigUseCase = GetBrandingConfigUseCase(fakeRepository)
+        val updateBrandingUseCase = UpdateBrandingUseCase(fakeRepository)
+
+        val settingsUseCases = SettingsUseCases(
+            getOperationsConfig = getOperationsConfigUseCase,
+            updateOperations = updateOperationsUseCase,
+            getCommunicationConfig = getCommunicationConfigUseCase,
+            updateCommunication = updateCommunicationUseCase,
+            getReminderTemplate = getReminderTemplateUseCase,
+            updateReminderTemplate = updateReminderTemplateUseCase,
+            getBrandingConfig = getBrandingConfigUseCase,
+            updateBranding = updateBrandingUseCase
+        )
+
         viewModel = SettingsViewModel(
-            getOperationsConfigUseCase = getOperationsConfigUseCase,
-            updateOperationsUseCase = updateOperationsUseCase,
-            getCommunicationConfigUseCase = getCommunicationConfigUseCase,
-            updateCommunicationUseCase = updateCommunicationUseCase,
-            getReminderTemplateUseCase = getReminderTemplateUseCase,
-            updateReminderTemplateUseCase = updateReminderTemplateUseCase
+            settingsUseCases = settingsUseCases,
+            brandingStorageRepository = fakeBrandingStorage
         )
     }
 
@@ -194,5 +206,94 @@ class SettingsViewModelTest {
             reminderTemplate = template
             return DataResult.Success(Unit)
         }
+
+        var brandingConfig = BrandingConfig(
+            shopName = "Unique Makeover",
+            tagline = "Luxury Beauty Parlour"
+        )
+        override suspend fun getBrandingConfig(): BrandingConfig = brandingConfig
+        override suspend fun updateBrandingConfig(config: BrandingConfig): DataResult<Unit> {
+            brandingConfig = config
+            return DataResult.Success(Unit)
+        }
+    }
+
+    private class FakeBrandingStorageRepository : BrandingStorageRepository {
+        var logoDeleted = false
+        var wallpaperDeleted = false
+
+        override suspend fun saveLogo(sourceUriString: String): DataResult<String> =
+            DataResult.Success("branding/logo.jpg")
+
+        override suspend fun saveWallpaper(sourceUriString: String): DataResult<String> =
+            DataResult.Success("branding/wallpaper.jpg")
+
+        override suspend fun deleteLogo(): Boolean {
+            logoDeleted = true
+            return true
+        }
+
+        override suspend fun deleteWallpaper(): Boolean {
+            wallpaperDeleted = true
+            return true
+        }
+    }
+
+    @Test
+    fun saveBranding_validInput_updatesStateAndSetsSuccessMessage() = runTest {
+        advanceUntilIdle()
+        viewModel.saveBranding(
+            BrandingDraft(
+                shopName = "Unique Makeover Studio",
+                tagline = "Jalgaon Jamod • Luxury Parlour"
+            )
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.brandingErrorMessage)
+        assertNotNull(state.successMessage)
+        assertEquals("Unique Makeover Studio", state.brandingConfig.shopName)
+        assertEquals("Jalgaon Jamod • Luxury Parlour", state.brandingConfig.tagline)
+    }
+
+    @Test
+    fun saveBranding_withLogoAndWallpaper_storesAndUpdatesPaths() = runTest {
+        advanceUntilIdle()
+        viewModel.saveBranding(
+            BrandingDraft(
+                shopName = "Unique Makeover Studio",
+                tagline = "Jalgaon Jamod",
+                logoUriString = "content://media/logo",
+                wallpaperUriString = "content://media/wallpaper"
+            )
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.brandingErrorMessage)
+        assertEquals("branding/logo.jpg", state.brandingConfig.logoPath)
+        assertEquals("branding/wallpaper.jpg", state.brandingConfig.wallpaperPath)
+    }
+
+    @Test
+    fun saveBranding_removeLogoAndWallpaper_deletesAndClearsPaths() = runTest {
+        advanceUntilIdle()
+        viewModel.saveBranding(
+            BrandingDraft(
+                shopName = "Unique Makeover Studio",
+                tagline = "Jalgaon Jamod",
+                removeLogo = true,
+                removeWallpaper = true
+            )
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.brandingErrorMessage)
+        assertNull(state.brandingConfig.logoPath)
+        assertNull(state.brandingConfig.wallpaperPath)
+        assertTrue(fakeBrandingStorage.logoDeleted)
+        assertTrue(fakeBrandingStorage.wallpaperDeleted)
     }
 }

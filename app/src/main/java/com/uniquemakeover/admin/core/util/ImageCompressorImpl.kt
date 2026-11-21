@@ -41,7 +41,8 @@ class ImageCompressorImpl @Inject constructor(
             sourceUri = sourceUri,
             destinationFile = destinationFile,
             targetMaxEdge = LOGO_MAX_EDGE,
-            quality = LOGO_JPEG_QUALITY
+            quality = LOGO_JPEG_QUALITY,
+            cropToSquare = true
         )
     }
 
@@ -58,15 +59,32 @@ class ImageCompressorImpl @Inject constructor(
         sourceUri: Uri,
         destinationFile: File,
         targetMaxEdge: Int,
-        quality: Int
+        quality: Int,
+        cropToSquare: Boolean = false
     ): File = withContext(ioDispatcher) {
         val bounds = decodeImageBounds(sourceUri)
-        val inSampleSize = calculateInSampleSize(bounds.first, bounds.second, targetMaxEdge)
+        val inSampleSize = calculateInSampleSize(
+            width = bounds.first,
+            height = bounds.second,
+            targetMaxEdge = targetMaxEdge,
+            cropToSquare = cropToSquare
+        )
         val decodedBitmap = decodeSampledBitmap(sourceUri, inSampleSize)
             ?: throw IllegalArgumentException("Unable to decode image from uri: $sourceUri")
 
-        val scaledBitmap = scaleBitmapToMaxEdge(decodedBitmap, targetMaxEdge)
-        if (scaledBitmap != decodedBitmap) {
+        val preparedBitmap = if (cropToSquare) {
+            cropToCenterSquare(decodedBitmap)
+        } else {
+            decodedBitmap
+        }
+
+        val scaledBitmap = scaleBitmapToMaxEdge(preparedBitmap, targetMaxEdge)
+        if (scaledBitmap != preparedBitmap && preparedBitmap != decodedBitmap) {
+            preparedBitmap.recycle()
+        }
+        if (preparedBitmap != decodedBitmap) {
+            decodedBitmap.recycle()
+        } else if (scaledBitmap != decodedBitmap) {
             decodedBitmap.recycle()
         }
 
@@ -84,6 +102,16 @@ class ImageCompressorImpl @Inject constructor(
         }
 
         destinationFile
+    }
+
+    private fun cropToCenterSquare(source: Bitmap): Bitmap {
+        val width = source.width
+        val height = source.height
+        if (width == height) return source
+        val size = minOf(width, height)
+        val x = (width - size) / 2
+        val y = (height - size) / 2
+        return Bitmap.createBitmap(source, x, y, size, size)
     }
 
     private fun decodeImageBounds(sourceUri: Uri): Pair<Int, Int> {
@@ -110,10 +138,15 @@ class ImageCompressorImpl @Inject constructor(
         }
     }
 
-    private fun calculateInSampleSize(width: Int, height: Int, targetMaxEdge: Int): Int {
+    private fun calculateInSampleSize(
+        width: Int,
+        height: Int,
+        targetMaxEdge: Int,
+        cropToSquare: Boolean = false
+    ): Int {
         var inSampleSize = 1
-        val longestEdge = maxOf(width, height)
-        while (longestEdge / (inSampleSize * 2) >= targetMaxEdge) {
+        val edgeToConsider = if (cropToSquare) minOf(width, height) else maxOf(width, height)
+        while (edgeToConsider / (inSampleSize * 2) >= targetMaxEdge) {
             inSampleSize *= 2
         }
         return inSampleSize

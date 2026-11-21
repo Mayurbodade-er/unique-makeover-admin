@@ -32,6 +32,7 @@ import com.uniquemakeover.admin.core.ui.theme.BorderLine
 import com.uniquemakeover.admin.core.ui.theme.BrandPrimary
 import com.uniquemakeover.admin.core.ui.theme.LuxuryGold
 import com.uniquemakeover.admin.core.ui.theme.WarmBackground
+import com.uniquemakeover.admin.feature.settings.presentation.sections.BrandingSection
 import com.uniquemakeover.admin.feature.settings.presentation.sections.CommunicationSection
 import com.uniquemakeover.admin.feature.settings.presentation.sections.OperationsSection
 import com.uniquemakeover.admin.feature.settings.presentation.sections.ReminderTemplateSection
@@ -44,6 +45,7 @@ fun SettingsRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val actions = remember(viewModel) {
         SettingsActions(
+            onSaveBranding = viewModel::saveBranding,
             onSaveOperations = viewModel::saveOperations,
             onSaveCommunication = viewModel::saveCommunication,
             onSaveReminderTemplate = viewModel::saveReminderTemplate,
@@ -109,12 +111,22 @@ private fun SettingsContent(
     val errorString = uiState.errorMessage?.asString(context)
     val commsErrorString = uiState.commsErrorMessage?.asString(context)
     val templateErrorString = uiState.templateErrorMessage?.asString(context)
+    val brandingErrorString = uiState.brandingErrorMessage?.asString(context)
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
+        BrandingSection(
+            initialConfig = uiState.brandingConfig,
+            onSaveBranding = actions.onSaveBranding,
+            errorMessage = brandingErrorString,
+            modifier = Modifier.padding(16.dp)
+        )
+
+        HorizontalDivider(color = BorderLine, thickness = 1.dp)
+
         OperationsSection(
             initialConfig = uiState.operationsConfig,
             onSaveOperations = actions.onSaveOperations,

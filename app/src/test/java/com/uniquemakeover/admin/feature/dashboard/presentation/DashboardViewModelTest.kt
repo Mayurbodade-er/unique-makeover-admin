@@ -2,10 +2,15 @@ package com.uniquemakeover.admin.feature.dashboard.presentation
 
 import com.uniquemakeover.admin.core.common.UiText
 import com.uniquemakeover.admin.core.domain.model.AppointmentStatus
+import com.uniquemakeover.admin.core.domain.model.CommunicationConfig
+import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.domain.model.Payment
+import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.model.Slot
 import com.uniquemakeover.admin.core.domain.repository.PaymentRepository
+import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
+import com.uniquemakeover.admin.feature.settings.domain.model.BrandingConfig
 import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
 import com.uniquemakeover.admin.feature.appointments.domain.repository.AppointmentRepository
 import com.uniquemakeover.admin.feature.appointments.domain.repository.SlotRepository
@@ -99,8 +104,29 @@ class DashboardViewModelTest {
             getDashboardKpisUseCase = getDashboardKpisUseCase,
             getTodayScheduleUseCase = getTodayScheduleUseCase,
             appointmentOperations = appointmentOperations,
-            timeProvider = fakeTimeProvider
+            timeProvider = fakeTimeProvider,
+            settingsRepository = FakeSettingsRepository()
         )
+    }
+
+    private class FakeSettingsRepository : SettingsRepository {
+        override fun getSettings(): Flow<Settings?> = flowOf(Settings(shop = "Unique Makeover"))
+        override suspend fun getSettingsSync(): Settings? = Settings(shop = "Unique Makeover")
+        override suspend fun getOperationsConfig(): OperationsConfig = OperationsConfig()
+        override suspend fun updateOperationsConfig(config: OperationsConfig): DataResult<Unit> =
+            DataResult.Success(Unit)
+        override suspend fun updateSettings(settings: Settings): DataResult<Unit> =
+            DataResult.Success(Unit)
+        override suspend fun getCommunicationConfig(): CommunicationConfig = CommunicationConfig()
+        override suspend fun updateCommunicationConfig(config: CommunicationConfig): DataResult<Unit> =
+            DataResult.Success(Unit)
+        override suspend fun getReminderTemplate(): String = ""
+        override suspend fun updateReminderTemplate(template: String): DataResult<Unit> =
+            DataResult.Success(Unit)
+        override suspend fun getBrandingConfig(): BrandingConfig = BrandingConfig()
+        override suspend fun updateBrandingConfig(
+            config: BrandingConfig
+        ): DataResult<Unit> = DataResult.Success(Unit)
     }
 
     @Test

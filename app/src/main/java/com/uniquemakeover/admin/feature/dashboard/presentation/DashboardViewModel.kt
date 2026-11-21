@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.uniquemakeover.admin.core.common.UiText
 import com.uniquemakeover.admin.core.domain.model.AppointmentStatus
 import com.uniquemakeover.admin.core.domain.model.StatusUpdateResult
+import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.core.util.TimeProvider
 import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
@@ -29,7 +30,8 @@ class DashboardViewModel @Inject constructor(
     private val getDashboardKpisUseCase: GetDashboardKpisUseCase,
     private val getTodayScheduleUseCase: GetTodayScheduleUseCase,
     private val appointmentOperations: AppointmentOperations,
-    private val timeProvider: TimeProvider
+    private val timeProvider: TimeProvider,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -133,6 +135,20 @@ class DashboardViewModel @Inject constructor(
         getTodayScheduleUseCase()
             .onEach { schedule ->
                 _uiState.update { it.copy(schedule = schedule, isLoading = false) }
+            }
+            .launchIn(viewModelScope)
+
+        settingsRepository.getSettings()
+            .onEach { settings ->
+                if (settings != null) {
+                    _uiState.update {
+                        it.copy(
+                            shopName = settings.shop.ifBlank { "Unique Makeover" },
+                            tagline = settings.tagline.ifBlank { "Luxury Beauty Parlour" },
+                            logoPath = settings.logoPath
+                        )
+                    }
+                }
             }
             .launchIn(viewModelScope)
     }

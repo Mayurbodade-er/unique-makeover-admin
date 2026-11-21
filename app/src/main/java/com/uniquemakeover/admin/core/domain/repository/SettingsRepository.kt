@@ -4,6 +4,7 @@ import com.uniquemakeover.admin.core.domain.model.CommunicationConfig
 import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.result.DataResult
+import com.uniquemakeover.admin.feature.settings.domain.model.BrandingConfig
 import kotlinx.coroutines.flow.Flow
 
 interface SettingsRepository {
@@ -16,4 +17,6 @@ interface SettingsRepository {
     suspend fun updateCommunicationConfig(config: CommunicationConfig): DataResult<Unit>
     suspend fun getReminderTemplate(): String
     suspend fun updateReminderTemplate(template: String): DataResult<Unit>
+    suspend fun getBrandingConfig(): BrandingConfig = BrandingConfig()
+    suspend fun updateBrandingConfig(config: BrandingConfig): DataResult<Unit> = DataResult.Success(Unit)
 }

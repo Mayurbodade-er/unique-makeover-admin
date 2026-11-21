@@ -127,22 +127,82 @@ class UpdateBrandingUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`BrandingImageFileCleanupTest.kt`:** Verifies calling `deleteLogo()` deletes file from disk.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/model/BrandingConfig.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/data/image/LogoImageStore.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/data/image/WallpaperImageStore.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateBrandingUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/BrandingSection.kt
-app/src/test/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateBrandingUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/settings/data/image/LogoImageStoreTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/settings/presentation/BrandingSectionIntegrationTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsScreen.kt (Integrates BrandingSection)
-app/src/main/java/com/uniquemakeover/admin/core/ui/components/AppScaffold.kt (Binds dynamic shopName & logo)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/model/BrandingConfig.kt`
+   - **Architectural Role:** Domain Model (Settings / Branding)
+   - **Why Created:** Encapsulates the immutable branding configuration (`shopName`, `tagline`, `logoPath`, `bgPath`) independent of database entities or Android UI frameworks.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/repository/BrandingStorageRepository.kt`
+   - **Architectural Role:** Domain Repository Interface
+   - **Why Created:** Defines pure Kotlin contracts for persisting and resetting cropped logo and wallpaper images on the local filesystem, preserving Clean Architecture package boundaries.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/GetBrandingConfigUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Retrieves the current salon branding configuration from `SettingsRepository`.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateBrandingUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Validates that salon shop name cannot be blank and persists the updated branding model through `SettingsRepository`.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/SettingsUseCases.kt`
+   - **Architectural Role:** Domain UseCase Aggregate
+   - **Why Created:** Consolidates settings domain use cases into a single injectable aggregate to avoid Detekt `LongParameterList` violation in `SettingsViewModel`.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/settings/data/image/LogoImageStore.kt`
+   - **Architectural Role:** Data (File Storage / Image Compression)
+   - **Why Created:** Saves center-cropped 200x200 px logo images to `context.filesDir/branding/logo.jpg` @ 85% JPEG and cleans up disk files on logo reset.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/settings/data/image/WallpaperImageStore.kt`
+   - **Architectural Role:** Data (File Storage / Image Compression)
+   - **Why Created:** Saves downscaled wallpaper images (max 900 px longest edge) to `context.filesDir/branding/wallpaper.jpg` @ 72% JPEG and handles removal.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/settings/data/image/BrandingStorageRepositoryImpl.kt`
+   - **Architectural Role:** Data Repository Implementation
+   - **Why Created:** Implements `BrandingStorageRepository` by delegating to `LogoImageStore` and `WallpaperImageStore` on `@IoDispatcher`.
+9. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/BrandingSection.kt`
+   - **Architectural Role:** Presentation (Compose UI Component)
+   - **Why Created:** Renders salon branding controls including Salon Name and Tagline text fields, circular avatar preview with edit/reset actions, and 16:9 wallpaper preview with 40% scrim.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/settings/domain/usecase/UpdateBrandingUseCaseTest.kt`
+    - **Architectural Role:** Unit Test (Domain UseCase)
+    - **Why Created:** Verifies blank salon name rejection and successful delegation to `SettingsRepository`.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/settings/data/image/LogoImageStoreTest.kt`
+    - **Architectural Role:** Unit Test (Data / Image Store)
+    - **Why Created:** Verifies 200x200 px square downscaling and file creation/deletion in Robolectric environment.
+12. `app/src/test/java/com/uniquemakeover/admin/feature/settings/data/image/WallpaperImageStoreTest.kt`
+    - **Architectural Role:** Unit Test (Data / Image Store)
+    - **Why Created:** Verifies 900 px max dimension downscaling and file creation/deletion in Robolectric environment.
+13. `app/src/test/java/com/uniquemakeover/admin/feature/settings/presentation/sections/BrandingSectionTest.kt`
+    - **Architectural Role:** Compose UI Unit Test
+    - **Why Created:** Tests `BrandingSection` rendering, text field inputs, and callback emission for branding updates.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/domain/repository/SettingsRepository.kt`
+   - **Why Modified:** Added `getBrandingConfig()` and `updateBrandingConfig()` methods with default implementations to support branding lifecycle.
+2. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Added Hilt binding for `BrandingStorageRepository`.
+3. `app/src/main/java/com/uniquemakeover/admin/core/util/ImageCompressorImpl.kt`
+   - **Why Modified:** Implemented `cropToCenterSquare()` helper to guarantee exact 200x200 square crops for boutique logo.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/settings/data/mapper/SettingsMapper.kt`
+   - **Why Modified:** Added `SettingsEntity.toBrandingConfig()` mapping.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/settings/data/repository/SettingsRepositoryImpl.kt`
+   - **Why Modified:** Implemented `getBrandingConfig()` and `updateBrandingConfig()` on Room SQLite `settings` table.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsActions.kt`
+   - **Why Modified:** Added `BrandingDraft` data class and `onSaveBranding` action callback.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsUiState.kt`
+   - **Why Modified:** Added `brandingConfig` and `brandingErrorMessage` fields to settings state.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsViewModel.kt`
+   - **Why Modified:** Injected `SettingsUseCases` and implemented `saveBranding()` handling logo/wallpaper file persistence and DB update.
+9. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsScreen.kt`
+   - **Why Modified:** Integrated `BrandingSection` at the top of the settings screen.
+10. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardUiState.kt`
+    - **Why Modified:** Added `shopName`, `tagline`, and `logoPath` to `DashboardUiState`.
+11. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModel.kt`
+    - **Why Modified:** Loaded dynamic branding configuration into `DashboardUiState`.
+12. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt`
+    - **Why Modified:** Updated `DashboardTopBar` to display dynamic salon name, tagline, and circular avatar logo.
+13. `app/src/test/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsViewModelTest.kt`
+    - **Why Modified:** Added unit tests for branding state loading, validation failure, and successful save.
+14. `app/src/test/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsScreenTest.kt`
+    - **Why Modified:** Updated tests to handle scrolling over `BrandingSection`.
+15. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModelTest.kt`
+    - **Why Modified:** Updated view model instantiation with `FakeSettingsRepository` and verified branding propagation.
+16. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardKpiIntegrationTest.kt`
+    - **Why Modified:** Updated test setup to inject fake settings repository for dashboard branding assertions.
 
 ---
 

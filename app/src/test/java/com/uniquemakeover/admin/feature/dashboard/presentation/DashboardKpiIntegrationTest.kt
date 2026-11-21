@@ -13,6 +13,11 @@ import androidx.test.core.app.ApplicationProvider
 import com.uniquemakeover.admin.core.database.UniqueMakeoverDatabase
 import com.uniquemakeover.admin.core.database.dao.AppointmentDao
 import com.uniquemakeover.admin.core.database.entity.AppointmentEntity
+import com.uniquemakeover.admin.core.domain.model.CommunicationConfig
+import com.uniquemakeover.admin.core.domain.model.OperationsConfig
+import com.uniquemakeover.admin.core.domain.model.Settings
+import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
+import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.core.ui.theme.UniqueMakeoverTheme
 import com.uniquemakeover.admin.feature.appointments.data.repository.AppointmentRepositoryImpl
 import com.uniquemakeover.admin.feature.appointments.data.repository.PaymentRepositoryImpl
@@ -86,8 +91,26 @@ class DashboardKpiIntegrationTest {
             getDashboardKpisUseCase = getDashboardKpisUseCase,
             getTodayScheduleUseCase = getTodayScheduleUseCase,
             appointmentOperations = appointmentOperations,
-            timeProvider = fakeTimeProvider
+            timeProvider = fakeTimeProvider,
+            settingsRepository = FakeSettingsRepository()
         )
+    }
+
+    private class FakeSettingsRepository : SettingsRepository {
+        override fun getSettings(): kotlinx.coroutines.flow.Flow<Settings?> =
+            kotlinx.coroutines.flow.flowOf(Settings(shop = "Unique Makeover"))
+        override suspend fun getSettingsSync(): Settings? = Settings(shop = "Unique Makeover")
+        override suspend fun getOperationsConfig(): OperationsConfig = OperationsConfig()
+        override suspend fun updateOperationsConfig(config: OperationsConfig): DataResult<Unit> =
+            DataResult.Success(Unit)
+        override suspend fun updateSettings(settings: Settings): DataResult<Unit> =
+            DataResult.Success(Unit)
+        override suspend fun getCommunicationConfig(): CommunicationConfig = CommunicationConfig()
+        override suspend fun updateCommunicationConfig(config: CommunicationConfig): DataResult<Unit> =
+            DataResult.Success(Unit)
+        override suspend fun getReminderTemplate(): String = ""
+        override suspend fun updateReminderTemplate(template: String): DataResult<Unit> =
+            DataResult.Success(Unit)
     }
 
     @After

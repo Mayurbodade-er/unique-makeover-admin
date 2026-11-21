@@ -11,9 +11,11 @@ import com.uniquemakeover.admin.core.domain.model.Settings
 import com.uniquemakeover.admin.core.domain.repository.SettingsRepository
 import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.feature.reminders.domain.model.TemplateTokens
+import com.uniquemakeover.admin.feature.settings.data.mapper.toBrandingConfig
 import com.uniquemakeover.admin.feature.settings.data.mapper.toDomain
 import com.uniquemakeover.admin.feature.settings.data.mapper.toEntity
 import com.uniquemakeover.admin.feature.settings.data.mapper.toOperationsConfig
+import com.uniquemakeover.admin.feature.settings.domain.model.BrandingConfig
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
@@ -138,6 +140,34 @@ class SettingsRepositoryImpl @Inject constructor(
             } catch (e: SQLiteException) {
                 DataResult.Error(
                     UiText.DynamicString(e.localizedMessage ?: "Failed to save reminder template"),
+                    e
+                )
+            }
+        }
+    }
+
+    override suspend fun getBrandingConfig(): BrandingConfig {
+        return withContext(ioDispatcher) {
+            val entity = settingsDao.getSettingsSync() ?: createDefaultSettingsEntity()
+            entity.toBrandingConfig()
+        }
+    }
+
+    override suspend fun updateBrandingConfig(config: BrandingConfig): DataResult<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                val current = settingsDao.getSettingsSync() ?: createDefaultSettingsEntity()
+                val updated = current.copy(
+                    shop = config.shopName,
+                    tagline = config.tagline,
+                    logoPath = config.logoPath,
+                    bgPath = config.wallpaperPath
+                )
+                settingsDao.upsert(updated)
+                DataResult.Success(Unit)
+            } catch (e: SQLiteException) {
+                DataResult.Error(
+                    UiText.DynamicString(e.localizedMessage ?: "Failed to save branding settings"),
                     e
                 )
             }

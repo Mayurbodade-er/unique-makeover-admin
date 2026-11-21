@@ -21,7 +21,9 @@ import com.uniquemakeover.admin.feature.reminders.domain.repository.RemindersRep
 import com.uniquemakeover.admin.feature.services.data.image.LocalImageStore
 import com.uniquemakeover.admin.feature.services.data.repository.ServiceRepositoryImpl
 import com.uniquemakeover.admin.feature.services.domain.repository.ImageStorageRepository
+import com.uniquemakeover.admin.feature.settings.data.image.BrandingStorageRepositoryImpl
 import com.uniquemakeover.admin.feature.settings.data.repository.SettingsRepositoryImpl
+import com.uniquemakeover.admin.feature.settings.domain.repository.BrandingStorageRepository
 import com.uniquemakeover.admin.feature.upi.data.platform.QrImageExporterImpl
 import com.uniquemakeover.admin.feature.upi.data.platform.UpiWhatsAppLauncherImpl
 import com.uniquemakeover.admin.feature.upi.data.platform.ZxingQrEncoder
@@ -61,6 +63,12 @@ abstract class RepositoryModule {
     abstract fun bindSettingsRepository(
         settingsRepositoryImpl: SettingsRepositoryImpl
     ): SettingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBrandingStorageRepository(
+        brandingStorageRepositoryImpl: BrandingStorageRepositoryImpl
+    ): BrandingStorageRepository
 
     @Binds
     @Singleton

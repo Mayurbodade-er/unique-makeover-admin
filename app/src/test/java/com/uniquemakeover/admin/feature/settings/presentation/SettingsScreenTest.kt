@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.uniquemakeover.admin.core.domain.model.OperationsConfig
 import com.uniquemakeover.admin.core.ui.theme.UniqueMakeoverTheme
 import org.junit.Assert.assertEquals
@@ -45,11 +46,11 @@ class SettingsScreenTest {
         }
 
         composeTestRule.onNodeWithText("Salon Settings").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Open Time").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Close Time").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Slot Duration").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Staff Roster").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Save Operations Settings").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Open Time").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Close Time").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Slot Duration").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Staff Roster").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Save Operations Settings").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -83,7 +84,7 @@ class SettingsScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Save Operations Settings").performClick()
+        composeTestRule.onNodeWithText("Save Operations Settings").performScrollTo().performClick()
 
         assertTrue(clicked)
         assertEquals("09:00", savedOpen)

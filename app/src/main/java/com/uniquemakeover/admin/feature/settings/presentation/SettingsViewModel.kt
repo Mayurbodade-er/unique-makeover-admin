@@ -4,12 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.uniquemakeover.admin.core.common.UiText
 import com.uniquemakeover.admin.core.domain.result.DataResult
-import com.uniquemakeover.admin.feature.settings.domain.usecase.GetCommunicationConfigUseCase
-import com.uniquemakeover.admin.feature.settings.domain.usecase.GetOperationsConfigUseCase
-import com.uniquemakeover.admin.feature.settings.domain.usecase.GetReminderTemplateUseCase
-import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateCommunicationUseCase
-import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateOperationsUseCase
-import com.uniquemakeover.admin.feature.settings.domain.usecase.UpdateReminderTemplateUseCase
+import com.uniquemakeover.admin.feature.settings.domain.model.BrandingConfig
+import com.uniquemakeover.admin.feature.settings.domain.repository.BrandingStorageRepository
+import com.uniquemakeover.admin.feature.settings.domain.usecase.SettingsUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,12 +17,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val getOperationsConfigUseCase: GetOperationsConfigUseCase,
-    private val updateOperationsUseCase: UpdateOperationsUseCase,
-    private val getCommunicationConfigUseCase: GetCommunicationConfigUseCase,
-    private val updateCommunicationUseCase: UpdateCommunicationUseCase,
-    private val getReminderTemplateUseCase: GetReminderTemplateUseCase,
-    private val updateReminderTemplateUseCase: UpdateReminderTemplateUseCase
+    private val settingsUseCases: SettingsUseCases,
+    private val brandingStorageRepository: BrandingStorageRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -38,16 +31,75 @@ class SettingsViewModel @Inject constructor(
     fun loadSettings() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val operationsConfig = getOperationsConfigUseCase()
-            val commsConfig = getCommunicationConfigUseCase()
-            val template = getReminderTemplateUseCase()
+            val branding = settingsUseCases.getBrandingConfig()
+            val operationsConfig = settingsUseCases.getOperationsConfig()
+            val commsConfig = settingsUseCases.getCommunicationConfig()
+            val template = settingsUseCases.getReminderTemplate()
             _uiState.update {
                 it.copy(
                     isLoading = false,
+                    brandingConfig = branding,
                     operationsConfig = operationsConfig,
                     communicationConfig = commsConfig,
                     reminderTemplate = template
                 )
+            }
+        }
+    }
+
+    fun saveBranding(draft: BrandingDraft) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(brandingErrorMessage = null, successMessage = null) }
+            var currentLogoPath = _uiState.value.brandingConfig.logoPath
+            if (draft.removeLogo) {
+                brandingStorageRepository.deleteLogo()
+                currentLogoPath = null
+            } else if (draft.logoUriString != null) {
+                when (val result = brandingStorageRepository.saveLogo(draft.logoUriString)) {
+                    is DataResult.Success -> currentLogoPath = result.data
+                    is DataResult.Error -> {
+                        _uiState.update { it.copy(brandingErrorMessage = result.message) }
+                        return@launch
+                    }
+                }
+            }
+
+            var currentWallpaperPath = _uiState.value.brandingConfig.wallpaperPath
+            if (draft.removeWallpaper) {
+                brandingStorageRepository.deleteWallpaper()
+                currentWallpaperPath = null
+            } else if (draft.wallpaperUriString != null) {
+                when (val result = brandingStorageRepository.saveWallpaper(draft.wallpaperUriString)) {
+                    is DataResult.Success -> currentWallpaperPath = result.data
+                    is DataResult.Error -> {
+                        _uiState.update { it.copy(brandingErrorMessage = result.message) }
+                        return@launch
+                    }
+                }
+            }
+
+            val updatedConfig = BrandingConfig(
+                shopName = draft.shopName.trim(),
+                tagline = draft.tagline.trim(),
+                logoPath = currentLogoPath,
+                wallpaperPath = currentWallpaperPath
+            )
+
+            when (val result = settingsUseCases.updateBranding(updatedConfig)) {
+                is DataResult.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            brandingConfig = updatedConfig,
+                            successMessage = UiText.DynamicString("Branding settings saved"),
+                            brandingErrorMessage = null
+                        )
+                    }
+                }
+                is DataResult.Error -> {
+                    _uiState.update {
+                        it.copy(brandingErrorMessage = result.message)
+                    }
+                }
             }
         }
     }
@@ -60,9 +112,9 @@ class SettingsViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(errorMessage = null, successMessage = null) }
-            when (val result = updateOperationsUseCase(openTime, closeTime, slotMinutes, staffRaw)) {
+            when (val result = settingsUseCases.updateOperations(openTime, closeTime, slotMinutes, staffRaw)) {
                 is DataResult.Success -> {
-                    val updatedConfig = getOperationsConfigUseCase()
+                    val updatedConfig = settingsUseCases.getOperationsConfig()
                     _uiState.update {
                         it.copy(
                             operationsConfig = updatedConfig,
@@ -89,9 +141,9 @@ class SettingsViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(commsErrorMessage = null, successMessage = null) }
-            when (val result = updateCommunicationUseCase(whatsappPhone, merchantUpiId)) {
+            when (val result = settingsUseCases.updateCommunication(whatsappPhone, merchantUpiId)) {
                 is DataResult.Success -> {
-                    val updatedConfig = getCommunicationConfigUseCase()
+                    val updatedConfig = settingsUseCases.getCommunicationConfig()
                     _uiState.update {
                         it.copy(
                             communicationConfig = updatedConfig,
@@ -115,9 +167,9 @@ class SettingsViewModel @Inject constructor(
     fun saveReminderTemplate(template: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(templateErrorMessage = null, successMessage = null) }
-            when (val result = updateReminderTemplateUseCase(template)) {
+            when (val result = settingsUseCases.updateReminderTemplate(template)) {
                 is DataResult.Success -> {
-                    val updatedTemplate = getReminderTemplateUseCase()
+                    val updatedTemplate = settingsUseCases.getReminderTemplate()
                     _uiState.update {
                         it.copy(
                             reminderTemplate = updatedTemplate,
@@ -144,6 +196,7 @@ class SettingsViewModel @Inject constructor(
                 errorMessage = null,
                 commsErrorMessage = null,
                 templateErrorMessage = null,
+                brandingErrorMessage = null,
                 successMessage = null
             )
         }
