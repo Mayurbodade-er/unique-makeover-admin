@@ -17,5 +17,7 @@ data class SettingsUiState(
     val brandingErrorMessage: UiText? = null,
     val pinErrorMessage: UiText? = null,
     val successMessage: UiText? = null,
-    val isChangePinSuccess: Boolean = false
+    val isChangePinSuccess: Boolean = false,
+    val lastBackup: String? = null,
+    val isExportingBackup: Boolean = false
 )

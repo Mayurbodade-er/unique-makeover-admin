@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private const val BYTES_PER_KB = 1024
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsUseCases: SettingsUseCases,
@@ -35,13 +37,15 @@ class SettingsViewModel @Inject constructor(
             val operationsConfig = settingsUseCases.getOperationsConfig()
             val commsConfig = settingsUseCases.getCommunicationConfig()
             val template = settingsUseCases.getReminderTemplate()
+            val lastBackup = settingsUseCases.getLastBackup()
             _uiState.update {
                 it.copy(
                     isLoading = false,
                     brandingConfig = branding,
                     operationsConfig = operationsConfig,
                     communicationConfig = commsConfig,
-                    reminderTemplate = template
+                    reminderTemplate = template,
+                    lastBackup = lastBackup
                 )
             }
         }
@@ -253,6 +257,33 @@ class SettingsViewModel @Inject constructor(
                 successMessage = null,
                 isChangePinSuccess = false
             )
+        }
+    }
+
+    fun exportBackup(targetUriString: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isExportingBackup = true, errorMessage = null) }
+            when (val result = settingsUseCases.exportBackup(targetUriString)) {
+                is DataResult.Success -> {
+                    val sizeKb = result.data / BYTES_PER_KB
+                    val updatedLastBackup = settingsUseCases.getLastBackup()
+                    _uiState.update {
+                        it.copy(
+                            isExportingBackup = false,
+                            successMessage = UiText.DynamicString("Backup exported successfully (${sizeKb} KB)"),
+                            lastBackup = updatedLastBackup
+                        )
+                    }
+                }
+                is DataResult.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isExportingBackup = false,
+                            errorMessage = result.message
+                        )
+                    }
+                }
+            }
         }
     }
 }

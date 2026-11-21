@@ -174,6 +174,22 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun updateLastBackup(timestamp: String): DataResult<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                val current = settingsDao.getSettingsSync() ?: createDefaultSettingsEntity()
+                val updated = current.copy(lastBackup = timestamp)
+                settingsDao.upsert(updated)
+                DataResult.Success(Unit)
+            } catch (e: SQLiteException) {
+                DataResult.Error(
+                    UiText.DynamicString(e.localizedMessage ?: "Failed to update last backup"),
+                    e
+                )
+            }
+        }
+    }
+
     private fun createDefaultSettingsEntity(): SettingsEntity {
         return SettingsEntity(
             id = 1,

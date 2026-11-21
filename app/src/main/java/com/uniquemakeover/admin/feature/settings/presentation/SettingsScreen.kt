@@ -35,6 +35,7 @@ import com.uniquemakeover.admin.core.ui.theme.WarmBackground
 import com.uniquemakeover.admin.feature.settings.presentation.sections.AccessControlSection
 import com.uniquemakeover.admin.feature.settings.presentation.sections.BrandingSection
 import com.uniquemakeover.admin.feature.settings.presentation.sections.CommunicationSection
+import com.uniquemakeover.admin.feature.settings.presentation.sections.DataManagementSection
 import com.uniquemakeover.admin.feature.settings.presentation.sections.OperationsSection
 import com.uniquemakeover.admin.feature.settings.presentation.sections.ReminderTemplateSection
 
@@ -51,6 +52,7 @@ fun SettingsRoute(
             onSaveCommunication = viewModel::saveCommunication,
             onSaveReminderTemplate = viewModel::saveReminderTemplate,
             onChangePin = viewModel::changePin,
+            onExportBackup = viewModel::exportBackup,
             onClearMessages = viewModel::clearMessages
         )
     }
@@ -158,6 +160,14 @@ private fun SettingsContent(
             initialTemplate = uiState.reminderTemplate,
             onSaveTemplate = actions.onSaveReminderTemplate,
             errorMessage = templateErrorString
+        )
+
+        HorizontalDivider(color = BorderLine, thickness = 1.dp)
+
+        DataManagementSection(
+            lastBackup = uiState.lastBackup,
+            isExporting = uiState.isExportingBackup,
+            onExportBackup = actions.onExportBackup
         )
     }
 }

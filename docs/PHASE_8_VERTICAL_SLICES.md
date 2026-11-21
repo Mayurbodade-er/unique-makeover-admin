@@ -167,24 +167,74 @@ class ExportBackupUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`BackupFileNameTest.kt`:** Validates default backup naming convention: `UniqueMakeover_backup_YYYY-MM-DD.json`.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/settings/data/backup/BackupSnapshot.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/data/backup/BackupDtoMappers.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/data/backup/BackupWriter.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/data/backup/BackupWriterImpl.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/data/backup/BackupFileName.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/ExportBackupUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/DataManagementSection.kt
-app/src/test/java/com/uniquemakeover/admin/feature/settings/data/backup/BackupSerializerTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/settings/domain/usecase/ExportBackupUseCaseTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/settings/data/BackupExportIntegrationTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/di/AppModule.kt (Binds BackupWriter)
-app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsScreen.kt (Integrates DataManagementSection)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/model/BackupSnapshot.kt`
+   - **Architectural Role:** Domain Model / DTO (Settings / Data Lifecycle)
+   - **Why Created:** Implements the serializable Schema v2 data contracts (`BackupSnapshot`, `SettingsBackupDto`, `ServiceBackupDto`, `AppointmentBackupDto`) modeling full database export state independent of platform or database frameworks.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/model/BackupFileName.kt`
+   - **Architectural Role:** Domain Utility
+   - **Why Created:** Encapsulates the standard backup file naming convention `UniqueMakeover_backup_YYYY-MM-DD.json` per FRD §11.5.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/model/BackupDtoMappers.kt`
+   - **Architectural Role:** Domain Mapper
+   - **Why Created:** Provides pure Kotlin mapping extension functions converting core domain entities (`Settings`, `Service`, `Appointment`) to immutable Schema v2 backup DTOs.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/repository/BackupWriter.kt`
+   - **Architectural Role:** Domain Repository Contract
+   - **Why Created:** Defines the port interface for writing serialized backup documents to target URI streams without coupling domain logic to Android `Uri` or `ContentResolver`.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/settings/data/backup/BackupWriterImpl.kt`
+   - **Architectural Role:** Data Writer Implementation
+   - **Why Created:** Implements `BackupWriter` interface; serializes `BackupSnapshot` to pretty-printed UTF-8 JSON and streams bytes to Android Storage Access Framework output streams via `ContentResolver`.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/ExportBackupUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Coordinates parallel data retrieval across `SettingsRepository`, `ServiceRepository`, `AppointmentRepository`, and `ClientNoteRepository`, builds the `BackupSnapshot`, invokes `BackupWriter`, and records `lastBackup` timestamp upon success.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/GetLastBackupUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Single-responsibility use case querying the synchronized `lastBackup` timestamp string from `SettingsRepository`.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/sections/DataManagementSection.kt`
+   - **Architectural Role:** Presentation (Compose UI Component)
+   - **Why Created:** Renders the Backup & Recovery card with `desing.md` tokens, displays last backup status caption, and integrates SAF `CreateDocument` system file picker with progress state.
+9. `app/src/test/java/com/uniquemakeover/admin/feature/settings/data/backup/BackupSerializerTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Asserts that `BackupSnapshot` encodes to and decodes from golden Schema v2 JSON format with version 2 and expected properties.
+10. `app/src/test/java/com/uniquemakeover/admin/feature/settings/data/backup/BackupFileNameTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies default file naming formatting: `UniqueMakeover_backup_YYYY-MM-DD.json`.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/settings/domain/usecase/ExportBackupUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies `ExportBackupUseCase` business rules: repository reading, writer invocation, `lastBackup` recording, and error propagation.
+12. `app/src/test/java/com/uniquemakeover/admin/feature/settings/data/BackupExportIntegrationTest.kt`
+   - **Architectural Role:** Automated JVM Integration Test (Robolectric)
+   - **Why Created:** Verifies end-to-end integration across Room in-memory database, repository implementations, JSON serialization, and stream writing.
+13. `app/src/test/java/com/uniquemakeover/admin/feature/settings/presentation/sections/DataManagementSectionTest.kt`
+   - **Architectural Role:** Automated JVM UI Test (Robolectric)
+   - **Why Created:** Verifies `DataManagementSection` UI states: normal rendering, null backup date ("Never"), and active exporting state ("Exporting...").
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/database/dao/ClientNoteDao.kt`
+   - **Why Modified:** Added `getAllNotes(): List<ClientNoteEntity>` query to retrieve all client notes for backup export.
+2. `app/src/main/java/com/uniquemakeover/admin/core/domain/repository/ClientNoteRepository.kt`
+   - **Why Modified:** Added `getAllNotes(): Map<String, String>` method to domain interface.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/clients/data/repository/ClientNoteRepositoryImpl.kt`
+   - **Why Modified:** Implemented `getAllNotes()` bridging Room DAO to phone-note map on `ioDispatcher`.
+4. `app/src/main/java/com/uniquemakeover/admin/core/domain/repository/SettingsRepository.kt`
+   - **Why Modified:** Added `updateLastBackup(timestamp: String): DataResult<Unit>` to persist export timestamps.
+5. `app/src/main/java/com/uniquemakeover/admin/feature/settings/data/repository/SettingsRepositoryImpl.kt`
+   - **Why Modified:** Implemented `updateLastBackup()` updating Room `SettingsEntity.lastBackup`.
+6. `app/src/main/java/com/uniquemakeover/admin/core/di/RepositoryModule.kt`
+   - **Why Modified:** Added Hilt `@Binds` binding `BackupWriterImpl` to `BackupWriter`.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/settings/domain/usecase/SettingsUseCases.kt`
+   - **Why Modified:** Injected `exportBackup: ExportBackupUseCase` and `getLastBackup: GetLastBackupUseCase`.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsUiState.kt`
+   - **Why Modified:** Added `lastBackup: String?` and `isExportingBackup: Boolean` state fields.
+9. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsActions.kt`
+   - **Why Modified:** Added `onExportBackup: (String) -> Unit` action handler.
+10. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsViewModel.kt`
+   - **Why Modified:** Added `exportBackup(targetUriString)` method handling export state, success notification with file size in KB, and `lastBackup` refresh.
+11. `app/src/main/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsScreen.kt`
+   - **Why Modified:** Integrated `DataManagementSection` into the scrollable settings layout with divider.
+12. `app/src/test/java/com/uniquemakeover/admin/feature/settings/presentation/SettingsViewModelTest.kt`
+   - **Why Modified:** Updated test harness to provide mocked `ExportBackupUseCase` and verified export success and failure state transitions.
 
 ---
 

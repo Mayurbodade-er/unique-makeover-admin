@@ -12,5 +12,7 @@ data class SettingsUseCases @Inject constructor(
     val updateReminderTemplate: UpdateReminderTemplateUseCase,
     val getBrandingConfig: GetBrandingConfigUseCase,
     val updateBranding: UpdateBrandingUseCase,
-    val changePin: ChangePinUseCase
+    val changePin: ChangePinUseCase,
+    val exportBackup: ExportBackupUseCase,
+    val getLastBackup: GetLastBackupUseCase
 )

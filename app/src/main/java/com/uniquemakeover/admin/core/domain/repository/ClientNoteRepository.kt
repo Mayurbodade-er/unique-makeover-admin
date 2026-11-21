@@ -7,4 +7,5 @@ import kotlinx.coroutines.flow.Flow
 interface ClientNoteRepository {
     fun getNote(phone: String): Flow<ClientNote?>
     suspend fun saveNote(phone: String, noteText: String): DataResult<Unit>
+    suspend fun getAllNotes(): Map<String, String> = emptyMap()
 }

@@ -46,4 +46,10 @@ class ClientNoteRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override suspend fun getAllNotes(): Map<String, String> {
+        return withContext(ioDispatcher) {
+            clientNoteDao.getAllNotes().associate { it.phone to it.note }
+        }
+    }
 }

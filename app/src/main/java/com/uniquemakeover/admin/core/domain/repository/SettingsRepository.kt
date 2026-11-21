@@ -19,4 +19,5 @@ interface SettingsRepository {
     suspend fun updateReminderTemplate(template: String): DataResult<Unit>
     suspend fun getBrandingConfig(): BrandingConfig = BrandingConfig()
     suspend fun updateBrandingConfig(config: BrandingConfig): DataResult<Unit> = DataResult.Success(Unit)
+    suspend fun updateLastBackup(timestamp: String): DataResult<Unit> = DataResult.Success(Unit)
 }

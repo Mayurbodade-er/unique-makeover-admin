@@ -18,6 +18,9 @@ interface ClientNoteDao {
     @Query("SELECT * FROM client_notes WHERE phone = :phone LIMIT 1")
     suspend fun getNoteByPhoneSync(phone: String): ClientNoteEntity?
 
+    @Query("SELECT * FROM client_notes")
+    suspend fun getAllNotes(): List<ClientNoteEntity>
+
     @Upsert
     suspend fun upsert(note: ClientNoteEntity)
 

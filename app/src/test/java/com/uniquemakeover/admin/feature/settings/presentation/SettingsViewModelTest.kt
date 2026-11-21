@@ -11,8 +11,10 @@ import com.uniquemakeover.admin.feature.auth.domain.repository.PinRepository
 import com.uniquemakeover.admin.feature.auth.domain.usecase.ChangePinUseCase
 import com.uniquemakeover.admin.feature.settings.domain.model.BrandingConfig
 import com.uniquemakeover.admin.feature.settings.domain.repository.BrandingStorageRepository
+import com.uniquemakeover.admin.feature.settings.domain.usecase.ExportBackupUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetBrandingConfigUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetCommunicationConfigUseCase
+import com.uniquemakeover.admin.feature.settings.domain.usecase.GetLastBackupUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetOperationsConfigUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.GetReminderTemplateUseCase
 import com.uniquemakeover.admin.feature.settings.domain.usecase.SettingsUseCases
@@ -44,6 +46,7 @@ class SettingsViewModelTest {
     private lateinit var fakeBrandingStorage: FakeBrandingStorageRepository
     private lateinit var phoneSanitizer: PhoneSanitizer
     private val fakePinRepository = io.mockk.mockk<PinRepository>()
+    private val fakeExportBackupUseCase = io.mockk.mockk<ExportBackupUseCase>()
     private lateinit var viewModel: SettingsViewModel
 
     @Before
@@ -60,6 +63,7 @@ class SettingsViewModelTest {
         val getBrandingConfigUseCase = GetBrandingConfigUseCase(fakeRepository)
         val updateBrandingUseCase = UpdateBrandingUseCase(fakeRepository)
         val changePinUseCase = ChangePinUseCase(fakePinRepository)
+        val getLastBackupUseCase = GetLastBackupUseCase(fakeRepository)
 
         val settingsUseCases = SettingsUseCases(
             getOperationsConfig = getOperationsConfigUseCase,
@@ -70,7 +74,9 @@ class SettingsViewModelTest {
             updateReminderTemplate = updateReminderTemplateUseCase,
             getBrandingConfig = getBrandingConfigUseCase,
             updateBranding = updateBrandingUseCase,
-            changePin = changePinUseCase
+            changePin = changePinUseCase,
+            exportBackup = fakeExportBackupUseCase,
+            getLastBackup = getLastBackupUseCase
         )
 
         viewModel = SettingsViewModel(
@@ -191,14 +197,19 @@ class SettingsViewModelTest {
             merchantUpiId = "uniquemakeover@upi"
         )
 
-        override fun getSettings(): Flow<Settings?> = flowOf(null)
-        override suspend fun getSettingsSync(): Settings? = null
+        var lastBackupDate: String? = null
+        override fun getSettings(): Flow<Settings?> = flowOf(Settings(lastBackup = lastBackupDate))
+        override suspend fun getSettingsSync(): Settings? = Settings(lastBackup = lastBackupDate)
         override suspend fun getOperationsConfig(): OperationsConfig = config
         override suspend fun updateOperationsConfig(newConfig: OperationsConfig): DataResult<Unit> {
             config = newConfig
             return DataResult.Success(Unit)
         }
         override suspend fun updateSettings(settings: Settings): DataResult<Unit> = DataResult.Success(Unit)
+        override suspend fun updateLastBackup(timestamp: String): DataResult<Unit> {
+            lastBackupDate = timestamp
+            return DataResult.Success(Unit)
+        }
 
         override suspend fun getCommunicationConfig(): CommunicationConfig = commsConfig
         override suspend fun updateCommunicationConfig(config: CommunicationConfig): DataResult<Unit> {
@@ -327,5 +338,35 @@ class SettingsViewModelTest {
         val state = viewModel.uiState.value
         assertTrue(!state.isChangePinSuccess)
         assertNotNull(state.pinErrorMessage)
+    }
+
+    @Test
+    fun exportBackup_onSuccess_updatesStateWithSuccessAndFileSize() = runTest {
+        io.mockk.coEvery { fakeExportBackupUseCase.invoke("content://test/backup.json") } returns
+            DataResult.Success(2048)
+        fakeRepository.lastBackupDate = "2026-11-14"
+
+        viewModel.exportBackup("content://test/backup.json")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        org.junit.Assert.assertFalse(state.isExportingBackup)
+        assertNotNull(state.successMessage)
+        assertNull(state.errorMessage)
+        assertEquals("2026-11-14", state.lastBackup)
+    }
+
+    @Test
+    fun exportBackup_onError_updatesStateWithErrorMessage() = runTest {
+        io.mockk.coEvery { fakeExportBackupUseCase.invoke("content://test/backup.json") } returns
+            DataResult.Error(com.uniquemakeover.admin.core.common.UiText.DynamicString("Write failed"))
+
+        viewModel.exportBackup("content://test/backup.json")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        org.junit.Assert.assertFalse(state.isExportingBackup)
+        assertNull(state.successMessage)
+        assertNotNull(state.errorMessage)
     }
 }

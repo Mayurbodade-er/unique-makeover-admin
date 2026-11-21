@@ -15,5 +15,6 @@ data class SettingsActions(
     val onSaveCommunication: (String, String) -> Unit = { _, _ -> },
     val onSaveReminderTemplate: (String) -> Unit = {},
     val onChangePin: (String, String, String) -> Unit = { _, _, _ -> },
+    val onExportBackup: (String) -> Unit = {},
     val onClearMessages: () -> Unit = {}
 )
