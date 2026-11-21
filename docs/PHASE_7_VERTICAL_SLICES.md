@@ -298,19 +298,47 @@ class GetAlertBannersUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`AlertBannerDeepLinkTest.kt` (Navigation Test):** Verifies tapping each banner navigates to the exact intended `Routes` destination.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/domain/model/AlertBanner.kt
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/domain/usecase/GetAlertBannersUseCase.kt
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/components/AlertBannerCard.kt
-app/src/test/java/com/uniquemakeover/admin/feature/dashboard/domain/usecase/GetAlertBannersUseCaseTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/AlertBannerDeepLinkTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt (Renders AlertBanner list)
-app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModel.kt (Combines AlertBanners Flow)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/domain/model/AlertBanner.kt`
+   - **Architectural Role:** Domain Model (Dashboard / Alerts)
+   - **Why Created:** Defines the immutable sealed hierarchy representing the 5 distinct operational alert banners (`BackupOverdueMissing`, `BackupOverdue`, `RemindersPending`, `UpiNotConfigured`, `WaNotConfigured`, `OverdueAppointments`), priorities, and `BannerDeepLinkTarget` contracts independent of any database or UI framework.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/domain/usecase/GetAlertBannersUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Evaluates operational alert conditions by combining reactive `SettingsRepository.getSettings()` and `AppointmentRepository.getAllAppointments()`, checking for missing communications configs, overdue backups (>3 days), overdue booked appointments, and pending tomorrow reminders, sorted in priority order.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/components/AlertBannerCard.kt`
+   - **Architectural Role:** Presentation (Compose UI Component)
+   - **Why Created:** Renders high-visibility alert banner cards adhering to `desing.md` with left accent colored strips (Red for backup overdue, Gold for reminders, Amber for missing comms/overdue appointments), leading type icon, title, description, 1-tap action button, and session dismiss `(X)` button.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardActions.kt`
+   - **Architectural Role:** Presentation (Action Contracts)
+   - **Why Created:** Consolidates UI callbacks and action delegates for alerts, navigation, and dashboard overview interactions, ensuring ViewModel and Compose screens adhere strictly to Detekt parameter limits.
+5. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/domain/usecase/GetAlertBannersUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies trigger conditions for all 5 alert types, backup threshold edge cases (>3 days vs <=3 days), empty vs non-empty configurations, and priority sorting.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/AlertBannerDeepLinkTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies boundary mapping from alert banners to `BannerDeepLinkTarget` and resolution to `Routes` navigation paths.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/components/AlertBannerCardTest.kt`
+   - **Architectural Role:** Compose UI Unit Test
+   - **Why Created:** Tests `AlertBannerCard` rendering, visual elements, and action/dismiss callbacks in Robolectric environment.
+8. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreenAlertsTest.kt`
+   - **Architectural Role:** Compose UI Unit Test
+   - **Why Created:** Verifies that alert banners are displayed prominently above the operational overview section on the dashboard and handle action and dismissal clicks.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardUiState.kt`
+   - **Why Modified:** Added `alertBanners: List<AlertBanner>` to state representation.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModel.kt`
+   - **Why Modified:** Injected `GetAlertBannersUseCase`, maintained session-scoped `_dismissedBannerIds`, combined visible banners into `uiState`, and provided `dismissBanner(id)` action.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardScreen.kt`
+   - **Why Modified:** Added `DashboardAlertActions`, integrated `DashboardAlertBannersSection` into scrollable overview, and wired deep link navigation and dismiss callbacks.
+4. `app/src/main/java/com/uniquemakeover/admin/navigation/UniqueMakeoverNavHost.kt`
+   - **Why Modified:** Connected dashboard `onNavigateToDeepLink` callback to `Routes.Settings`, `Routes.Appointments`, and `Routes.Reminders`.
+5. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardViewModelTest.kt`
+   - **Why Modified:** Injected `GetAlertBannersUseCase` in test harness and verified alert banner emission and session-scoped dismissal in `DashboardUiState`.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/dashboard/presentation/DashboardKpiIntegrationTest.kt`
+   - **Why Modified:** Updated `DashboardViewModel` instantiation with `GetAlertBannersUseCase`.
 
 ---
 

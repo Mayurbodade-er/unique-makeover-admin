@@ -5,11 +5,13 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -67,7 +69,10 @@ import com.uniquemakeover.admin.feature.appointments.presentation.booking.Bookin
 import com.uniquemakeover.admin.feature.appointments.presentation.payment.RecordPaymentDialog
 import com.uniquemakeover.admin.feature.appointments.presentation.payment.RecordPaymentUiState
 import com.uniquemakeover.admin.feature.appointments.presentation.payment.RecordPaymentViewModel
+import com.uniquemakeover.admin.feature.dashboard.domain.model.AlertBanner
+import com.uniquemakeover.admin.feature.dashboard.domain.model.BannerDeepLinkTarget
 import com.uniquemakeover.admin.feature.dashboard.domain.model.ScheduleItem
+import com.uniquemakeover.admin.feature.dashboard.presentation.components.AlertBannerCard
 import com.uniquemakeover.admin.feature.dashboard.presentation.components.KpiRow
 import com.uniquemakeover.admin.feature.dashboard.presentation.components.ScheduleCardActions
 import com.uniquemakeover.admin.feature.dashboard.presentation.components.ScheduleEmptyBanner
@@ -77,30 +82,38 @@ import com.uniquemakeover.admin.feature.dashboard.presentation.components.Schedu
 @Composable
 fun DashboardRoute(
     viewModel: DashboardViewModel,
+    navCallbacks: DashboardNavCallbacks = DashboardNavCallbacks(),
     bookingViewModel: BookingViewModel = hiltViewModel(),
     paymentViewModel: RecordPaymentViewModel = hiltViewModel(),
-    onNavigateToUpiQr: (appointment: Appointment, amount: Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val bookingUiState by bookingViewModel.uiState.collectAsStateWithLifecycle()
-    val paymentUiState by paymentViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var isBookingOpen by remember { mutableStateOf(false) }
     var paymentTarget by remember { mutableStateOf<Appointment?>(null) }
     var deleteTarget by remember { mutableStateOf<Appointment?>(null) }
 
-    val actions = remember(context, viewModel, bookingViewModel) {
-        buildScheduleActions(
-            context = context,
-            viewModel = viewModel,
-            onPayment = { paymentTarget = it },
-            onEdit = {
-                bookingViewModel.loadAppointmentForEdit(it.id)
+    val dashboardActions = remember(context, viewModel, bookingViewModel, navCallbacks) {
+        DashboardActions(
+            schedule = buildScheduleActions(
+                context = context,
+                viewModel = viewModel,
+                onPayment = { paymentTarget = it },
+                onEdit = {
+                    bookingViewModel.loadAppointmentForEdit(it.id)
+                    isBookingOpen = true
+                },
+                onDelete = { deleteTarget = it }
+            ),
+            alerts = DashboardAlertActions(
+                onActionClick = { banner -> navCallbacks.onNavigateToDeepLink(banner.deepLinkTarget) },
+                onDismissClick = { banner -> viewModel.dismissBanner(banner.id) }
+            ),
+            onOpenBooking = {
+                bookingViewModel.loadInitialData()
                 isBookingOpen = true
-            },
-            onDelete = { deleteTarget = it }
+            }
         )
     }
 
@@ -108,35 +121,68 @@ fun DashboardRoute(
 
     DashboardScreen(
         uiState = uiState,
-        actions = actions,
+        actions = dashboardActions,
         snackbarHostState = snackbarHostState,
-        onOpenBooking = {
-            bookingViewModel.loadInitialData()
-            isBookingOpen = true
-        },
         modifier = modifier
     )
 
-    DashboardBookingModal(isBookingOpen, bookingUiState, bookingViewModel) {
-        isBookingOpen = false
+    DashboardModalsHost(
+        viewModel = viewModel,
+        bookingViewModel = bookingViewModel,
+        paymentViewModel = paymentViewModel,
+        modalControls = DashboardModalControls(
+            isBookingOpen = isBookingOpen,
+            paymentTarget = paymentTarget,
+            deleteTarget = deleteTarget,
+            onShowPaymentQr = { apt, amt ->
+                paymentTarget = null
+                navCallbacks.onNavigateToUpiQr(apt, amt)
+            },
+            onCloseBooking = { isBookingOpen = false },
+            onClosePayment = { paymentTarget = null },
+            onCloseDelete = { deleteTarget = null }
+        )
+    )
+}
+
+private data class DashboardModalControls(
+    val isBookingOpen: Boolean,
+    val paymentTarget: Appointment?,
+    val deleteTarget: Appointment?,
+    val onShowPaymentQr: (Appointment, Int) -> Unit,
+    val onCloseBooking: () -> Unit,
+    val onClosePayment: () -> Unit,
+    val onCloseDelete: () -> Unit
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DashboardModalsHost(
+    viewModel: DashboardViewModel,
+    bookingViewModel: BookingViewModel,
+    paymentViewModel: RecordPaymentViewModel,
+    modalControls: DashboardModalControls
+) {
+    val bookingUiState by bookingViewModel.uiState.collectAsStateWithLifecycle()
+    val paymentUiState by paymentViewModel.uiState.collectAsStateWithLifecycle()
+
+    DashboardBookingModal(modalControls.isBookingOpen, bookingUiState, bookingViewModel) {
+        modalControls.onCloseBooking()
         viewModel.refresh()
     }
     DashboardPaymentModal(
-        target = paymentTarget,
+        target = modalControls.paymentTarget,
         uiState = paymentUiState,
         viewModel = paymentViewModel,
-        onShowPaymentQr = { apt, amt ->
-            paymentTarget = null
-            onNavigateToUpiQr(apt, amt)
-        },
+        onShowPaymentQr = modalControls.onShowPaymentQr,
         onDismiss = {
-            paymentTarget = null
+            modalControls.onClosePayment()
             viewModel.refresh()
         }
     )
-    DashboardDeleteModal(deleteTarget, onDismiss = { deleteTarget = null }) {
+    DashboardDeleteModal(modalControls.deleteTarget, onDismiss = modalControls.onCloseDelete) {
         viewModel.deleteAppointment(it)
-        deleteTarget = null
+        modalControls.onCloseDelete()
     }
 }
 
@@ -251,9 +297,8 @@ private fun DashboardSnackbarEffect(
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState,
-    actions: ScheduleCardActions = ScheduleCardActions(),
+    actions: DashboardActions = DashboardActions(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    onOpenBooking: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -270,7 +315,7 @@ fun DashboardScreen(
         snackbarHost = { DashboardSnackbarHost(snackbarHostState) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = onOpenBooking,
+                onClick = actions.onOpenBooking,
                 containerColor = BrandPrimary,
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -288,27 +333,66 @@ fun DashboardScreen(
                 CircularProgressIndicator(color = BrandPrimary)
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Text(
-                    text = "Operational Overview",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontFamily = FontFamily.Serif,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = BrandPrimary
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                KpiRow(kpis = uiState.kpis)
-                Spacer(modifier = Modifier.height(24.dp))
-                DashboardScheduleSection(schedule = uiState.schedule, actions = actions)
-                Spacer(modifier = Modifier.height(64.dp))
-            }
+            DashboardScrollableContent(
+                uiState = uiState,
+                actions = actions,
+                modifier = Modifier.padding(innerPadding)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DashboardScrollableContent(
+    uiState: DashboardUiState,
+    actions: DashboardActions,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        if (uiState.alertBanners.isNotEmpty()) {
+            DashboardAlertBannersSection(
+                banners = uiState.alertBanners,
+                alertActions = actions.alerts
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        Text(
+            text = "Operational Overview",
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontFamily = FontFamily.Serif,
+                fontWeight = FontWeight.Bold
+            ),
+            color = BrandPrimary
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        KpiRow(kpis = uiState.kpis)
+        Spacer(modifier = Modifier.height(24.dp))
+        DashboardScheduleSection(schedule = uiState.schedule, actions = actions.schedule)
+        Spacer(modifier = Modifier.height(64.dp))
+    }
+}
+
+@Composable
+private fun DashboardAlertBannersSection(
+    banners: List<AlertBanner>,
+    alertActions: DashboardAlertActions
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        banners.forEach { banner ->
+            AlertBannerCard(
+                banner = banner,
+                onActionClick = { alertActions.onActionClick(banner) },
+                onDismissClick = { alertActions.onDismissClick(banner) }
+            )
         }
     }
 }

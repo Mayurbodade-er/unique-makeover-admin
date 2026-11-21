@@ -103,7 +103,7 @@ class ScheduleStreamIntegrationTest {
 
         composeTestRule.setContent {
             UniqueMakeoverTheme {
-                DashboardScreen(uiState = uiState, actions = actions)
+                DashboardScreen(uiState = uiState, actions = DashboardActions(schedule = actions))
             }
         }
 

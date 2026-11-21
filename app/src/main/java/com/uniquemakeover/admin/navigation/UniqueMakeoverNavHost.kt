@@ -17,6 +17,8 @@ import com.uniquemakeover.admin.feature.appointments.presentation.AppointmentsRo
 import com.uniquemakeover.admin.feature.auth.presentation.PinLockRoute
 import com.uniquemakeover.admin.feature.clients.presentation.detail.ClientDetailRoute
 import com.uniquemakeover.admin.feature.clients.presentation.list.ClientsRoute
+import com.uniquemakeover.admin.feature.dashboard.domain.model.BannerDeepLinkTarget
+import com.uniquemakeover.admin.feature.dashboard.presentation.DashboardNavCallbacks
 import com.uniquemakeover.admin.feature.dashboard.presentation.DashboardRoute
 import com.uniquemakeover.admin.feature.reminders.presentation.RemindersRoute
 import com.uniquemakeover.admin.feature.services.presentation.ServicesRoute
@@ -88,8 +90,7 @@ private fun NavGraphBuilder.coreNavDestinations(navController: NavHostController
     }
 
     composable(Routes.Dashboard) {
-        DashboardRoute(
-            viewModel = hiltViewModel(),
+        val navCallbacks = DashboardNavCallbacks(
             onNavigateToUpiQr = { apt, amt ->
                 navController.navigate(
                     Routes.upiQr(
@@ -103,7 +104,25 @@ private fun NavGraphBuilder.coreNavDestinations(navController: NavHostController
                         )
                     )
                 )
+            },
+            onNavigateToDeepLink = { target ->
+                when (target) {
+                    BannerDeepLinkTarget.SettingsComms,
+                    BannerDeepLinkTarget.SettingsData -> {
+                        navController.navigate(Routes.Settings)
+                    }
+                    BannerDeepLinkTarget.AppointmentsOverdue -> {
+                        navController.navigate(Routes.Appointments)
+                    }
+                    BannerDeepLinkTarget.RemindersTomorrow -> {
+                        navController.navigate(Routes.Reminders)
+                    }
+                }
             }
+        )
+        DashboardRoute(
+            viewModel = hiltViewModel(),
+            navCallbacks = navCallbacks
         )
     }
 

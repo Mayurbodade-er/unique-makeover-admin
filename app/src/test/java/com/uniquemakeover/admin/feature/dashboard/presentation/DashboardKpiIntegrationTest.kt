@@ -87,12 +87,20 @@ class DashboardKpiIntegrationTest {
             delete = deleteUseCase
         )
 
+        val fakeSettingsRepository = FakeSettingsRepository()
+        val getAlertBannersUseCase = com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetAlertBannersUseCase(
+            settingsRepository = fakeSettingsRepository,
+            appointmentRepository = repository,
+            timeProvider = fakeTimeProvider
+        )
+
         viewModel = DashboardViewModel(
             getDashboardKpisUseCase = getDashboardKpisUseCase,
             getTodayScheduleUseCase = getTodayScheduleUseCase,
             appointmentOperations = appointmentOperations,
             timeProvider = fakeTimeProvider,
-            settingsRepository = FakeSettingsRepository()
+            settingsRepository = fakeSettingsRepository,
+            getAlertBannersUseCase = getAlertBannersUseCase
         )
     }
 

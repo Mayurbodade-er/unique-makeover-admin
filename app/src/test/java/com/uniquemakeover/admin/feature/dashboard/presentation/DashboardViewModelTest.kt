@@ -19,6 +19,7 @@ import com.uniquemakeover.admin.feature.appointments.domain.usecase.CancelAppoin
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.DeleteAppointmentUseCase
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.MarkAppointmentDoneUseCase
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.UndoAppointmentStatusUseCase
+import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetAlertBannersUseCase
 import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetDashboardKpisUseCase
 import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetTodayScheduleUseCase
 import com.uniquemakeover.admin.testutil.FakeTimeProvider
@@ -50,11 +51,13 @@ class DashboardViewModelTest {
     private lateinit var fakeSlotRepository: FakeSlotRepository
     private lateinit var getDashboardKpisUseCase: GetDashboardKpisUseCase
     private lateinit var getTodayScheduleUseCase: GetTodayScheduleUseCase
+    private lateinit var getAlertBannersUseCase: GetAlertBannersUseCase
     private lateinit var markDoneUseCase: MarkAppointmentDoneUseCase
     private lateinit var cancelUseCase: CancelAppointmentUseCase
     private lateinit var undoUseCase: UndoAppointmentStatusUseCase
     private lateinit var deleteUseCase: DeleteAppointmentUseCase
     private lateinit var appointmentOperations: AppointmentOperations
+    private lateinit var fakeSettingsRepo: FakeSettingsRepository
     private lateinit var viewModel: DashboardViewModel
 
     private val sampleAppointment = Appointment(
@@ -99,13 +102,20 @@ class DashboardViewModelTest {
             undo = undoUseCase,
             delete = deleteUseCase
         )
+        fakeSettingsRepo = FakeSettingsRepository()
+        getAlertBannersUseCase = GetAlertBannersUseCase(
+            settingsRepository = fakeSettingsRepo,
+            appointmentRepository = fakeAppointmentRepository,
+            timeProvider = fakeTimeProvider
+        )
 
         viewModel = DashboardViewModel(
             getDashboardKpisUseCase = getDashboardKpisUseCase,
             getTodayScheduleUseCase = getTodayScheduleUseCase,
             appointmentOperations = appointmentOperations,
             timeProvider = fakeTimeProvider,
-            settingsRepository = FakeSettingsRepository()
+            settingsRepository = fakeSettingsRepo,
+            getAlertBannersUseCase = getAlertBannersUseCase
         )
     }
 
@@ -139,6 +149,20 @@ class DashboardViewModelTest {
         assertEquals(1, state.kpis.bookedCount)
         assertEquals(1, state.schedule.size)
         assertEquals("Sunita Sharma", state.schedule[0].appointment.name)
+    }
+
+    @Test
+    fun dismissBanner_hidesBannerFromUiState() = runTest {
+        advanceUntilIdle()
+        val initialBanners = viewModel.uiState.value.alertBanners
+        assertTrue("Expected alert banners to be present", initialBanners.isNotEmpty())
+
+        val bannerToDismiss = initialBanners.first()
+        viewModel.dismissBanner(bannerToDismiss.id)
+        advanceUntilIdle()
+
+        val updatedBanners = viewModel.uiState.value.alertBanners
+        assertTrue(updatedBanners.none { it.id == bannerToDismiss.id })
     }
 
     @Test

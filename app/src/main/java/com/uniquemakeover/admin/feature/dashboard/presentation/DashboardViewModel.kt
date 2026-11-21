@@ -10,6 +10,7 @@ import com.uniquemakeover.admin.core.domain.result.DataResult
 import com.uniquemakeover.admin.core.util.TimeProvider
 import com.uniquemakeover.admin.feature.appointments.domain.model.Appointment
 import com.uniquemakeover.admin.feature.appointments.domain.usecase.AppointmentOperations
+import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetAlertBannersUseCase
 import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetDashboardKpisUseCase
 import com.uniquemakeover.admin.feature.dashboard.domain.usecase.GetTodayScheduleUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -31,7 +33,8 @@ class DashboardViewModel @Inject constructor(
     private val getTodayScheduleUseCase: GetTodayScheduleUseCase,
     private val appointmentOperations: AppointmentOperations,
     private val timeProvider: TimeProvider,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val getAlertBannersUseCase: GetAlertBannersUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -39,6 +42,8 @@ class DashboardViewModel @Inject constructor(
 
     private val _uiEffect = MutableSharedFlow<DashboardUiEffect>()
     val uiEffect: SharedFlow<DashboardUiEffect> = _uiEffect.asSharedFlow()
+
+    private val _dismissedBannerIds = MutableStateFlow<Set<String>>(emptySet())
 
     init {
         loadDashboardData()
@@ -122,9 +127,19 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    fun dismissBanner(bannerId: String) {
+        _dismissedBannerIds.update { it + bannerId }
+    }
+
     private fun loadDashboardData() {
         val today = timeProvider.todayDate()
         _uiState.update { it.copy(todayDate = today, isLoading = true) }
+
+        combine(getAlertBannersUseCase(), _dismissedBannerIds) { banners, dismissedIds ->
+            banners.filter { it.id !in dismissedIds }
+        }.onEach { visibleBanners ->
+            _uiState.update { it.copy(alertBanners = visibleBanners) }
+        }.launchIn(viewModelScope)
 
         getDashboardKpisUseCase()
             .onEach { kpis ->
