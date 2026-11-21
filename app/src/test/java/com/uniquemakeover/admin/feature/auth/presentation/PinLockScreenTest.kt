@@ -6,7 +6,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.google.common.truth.Truth.assertThat
+import com.uniquemakeover.admin.core.common.UiText
 import com.uniquemakeover.admin.core.ui.theme.UniqueMakeoverTheme
+import com.uniquemakeover.admin.feature.auth.domain.model.LockoutState
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,5 +49,32 @@ class PinLockScreenTest {
         // Click backspace
         composeTestRule.onNodeWithContentDescription("Backspace").assertExists().performClick()
         assertThat(backspaceClicked).isTrue()
+    }
+
+    @Test
+    fun pinLockScreen_whenLocked_showsCountdownAndDisablesKeypad() {
+        var clickedChar: Char? = null
+
+        val uiState = PinLockUiState(
+            lockoutState = LockoutState.Locked(29),
+            isError = true,
+            errorMessage = UiText.DynamicString("Too many failed attempts. Try again in 29s")
+        )
+
+        composeTestRule.setContent {
+            UniqueMakeoverTheme {
+                PinLockScreen(
+                    uiState = uiState,
+                    onDigitClick = { clickedChar = it },
+                    onBackspace = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Too many failed attempts. Try again in 29s").assertIsDisplayed()
+
+        // Clicking a digit when disabled should not register a click callback
+        composeTestRule.onNodeWithText("5").performClick()
+        assertThat(clickedChar).isNull()
     }
 }

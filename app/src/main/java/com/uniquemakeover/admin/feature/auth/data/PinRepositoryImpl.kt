@@ -2,9 +2,11 @@ package com.uniquemakeover.admin.feature.auth.data
 
 import com.uniquemakeover.admin.core.di.IoDispatcher
 import com.uniquemakeover.admin.core.security.PinLockManager
+import com.uniquemakeover.admin.feature.auth.domain.model.LockoutState
 import com.uniquemakeover.admin.feature.auth.domain.model.PinResult
 import com.uniquemakeover.admin.feature.auth.domain.repository.PinRepository
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,11 +19,7 @@ class PinRepositoryImpl @Inject constructor(
 
     override suspend fun verifyPin(enteredPin: String): PinResult {
         return withContext(ioDispatcher) {
-            if (pinLockManager.verifyPin(enteredPin)) {
-                PinResult.Success
-            } else {
-                PinResult.Invalid
-            }
+            pinLockManager.verifyPin(enteredPin)
         }
     }
 
@@ -35,5 +33,9 @@ class PinRepositoryImpl @Inject constructor(
         withContext(ioDispatcher) {
             pinLockManager.setPin(newPin)
         }
+    }
+
+    override fun observeLockoutState(): Flow<LockoutState> {
+        return pinLockManager.observeLockoutState()
     }
 }

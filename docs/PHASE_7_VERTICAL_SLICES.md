@@ -451,21 +451,56 @@ class GetLockoutStateUseCase @Inject constructor(
 ### 11. Internal Contract / Boundary Tests
 * **`DataStoreLockoutPersistenceTest.kt`:** Verifies atomic write and read of attempt counters in `DataStore`.
 
-### 12. Files and Folder Mapping
+### 12. Files and Folder Mapping (Updated Post-Implementation)
 
-```
-[CREATED]
-app/src/main/java/com/uniquemakeover/admin/core/security/LockoutPolicy.kt
-app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/model/LockoutState.kt
-app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/usecase/GetLockoutStateUseCase.kt
-app/src/test/java/com/uniquemakeover/admin/core/security/LockoutPolicyTest.kt
-app/src/test/java/com/uniquemakeover/admin/feature/auth/domain/usecase/GetLockoutStateUseCaseTest.kt
-app/src/androidTest/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockoutIntegrationTest.kt
-[MODIFIED]
-app/src/main/java/com/uniquemakeover/admin/core/security/PinLockManager.kt (Integrates LockoutPolicy & DataStore)
-app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockViewModel.kt (Collects LockoutState)
-app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockScreen.kt (Renders disabled keypad & timer)
-```
+#### Files Created:
+1. `app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/model/LockoutState.kt`
+   - **Architectural Role:** Domain Model (Auth / Access Control)
+   - **Why Created:** Defines the immutable domain representation of lockout states (`Unlocked` vs `Locked(remainingSeconds: Int)`), completely decoupled from Android framework and persistence mechanisms.
+2. `app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/usecase/GetLockoutStateUseCase.kt`
+   - **Architectural Role:** Domain UseCase
+   - **Why Created:** Exposes a single-responsibility observable `Flow<LockoutState>` from `PinRepository` to the presentation layer without leaking data or security implementation details.
+3. `app/src/main/java/com/uniquemakeover/admin/core/security/LockoutPolicy.kt`
+   - **Architectural Role:** Core Security Policy
+   - **Why Created:** Implements pure algorithmic lockout rate limiting rules: evaluates failed attempts threshold (>= 5), computes 30-second countdown penalty using monotonic uptime, and provides automatic reboot recovery.
+4. `app/src/main/java/com/uniquemakeover/admin/core/di/DataStoreModule.kt`
+   - **Architectural Role:** Core Dependency Injection Module
+   - **Why Created:** Provides the singleton `DataStore<Preferences>` instance (`auth_lockout_prefs`) via Hilt for persistent, non-volatile storage of brute-force attempt counts and lockout timestamps.
+5. `app/src/test/java/com/uniquemakeover/admin/core/security/LockoutPolicyTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies lockout policy calculation: 0 to 4 failed attempts allow access, 5th attempt triggers 30s lockout, tick progression, expiry at 30s, and monotonic reboot reset penalty.
+6. `app/src/test/java/com/uniquemakeover/admin/feature/auth/domain/usecase/GetLockoutStateUseCaseTest.kt`
+   - **Architectural Role:** Automated JVM Unit Test
+   - **Why Created:** Verifies delegation of `GetLockoutStateUseCase` to `PinRepository.observeLockoutState()` using Turbine flow assertion.
+7. `app/src/test/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockoutIntegrationTest.kt`
+   - **Architectural Role:** Compose UI Integration Test (Robolectric)
+   - **Why Created:** End-to-end integration test verifying that submitting 5 consecutive incorrect PINs transitions the screen into lockout, renders the tick countdown, disables the numeric keypad, and ignores input clicks.
+
+#### Files Modified:
+1. `app/src/main/java/com/uniquemakeover/admin/core/util/TimeProvider.kt`
+   - **Why Modified:** Added `elapsedRealtime(): Long` to `TimeProvider` contract and implemented using `android.os.SystemClock.elapsedRealtime()` in `DefaultTimeProvider` for monotonic clock measurement immune to wall-clock tampering.
+2. `app/src/test/java/com/uniquemakeover/admin/testutil/FakeTimeProvider.kt`
+   - **Why Modified:** Added `currentElapsedRealtime: Long` field with default value for deterministic time testing in unit and integration test suites.
+3. `app/src/main/java/com/uniquemakeover/admin/feature/auth/domain/repository/PinRepository.kt`
+   - **Why Modified:** Added `fun observeLockoutState(): Flow<LockoutState>` to the domain repository interface.
+4. `app/src/main/java/com/uniquemakeover/admin/feature/auth/data/PinRepositoryImpl.kt`
+   - **Why Modified:** Implemented `observeLockoutState()` delegating to `PinLockManager` and wired `verifyPin` returning `PinResult`.
+5. `app/src/main/java/com/uniquemakeover/admin/core/security/PinLockManager.kt`
+   - **Why Modified:** Integrated `LockoutPolicy`, `TimeProvider`, and `DataStore<Preferences>` to persist failure attempts, enforce 30s lockout upon 5 failures, return `PinResult.Locked`, and emit live ticker updates in `observeLockoutState()`.
+6. `app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockUiState.kt`
+   - **Why Modified:** Added `lockoutState: LockoutState = LockoutState.Unlocked` and helper property `isLocked: Boolean`.
+7. `app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockViewModel.kt`
+   - **Why Modified:** Injected `GetLockoutStateUseCase`, collected lockout state into `PinLockUiState`, handled `PinResult.Locked` on submission, and dropped keypad/backspace inputs while locked.
+8. `app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/components/PinKeypad.kt`
+   - **Why Modified:** Added `enabled: Boolean = true` parameter, applied `.alpha(0.38f)` when disabled, disabled clicks on all digit and action buttons, and extracted `KeypadBottomRow` for clean function decomposition.
+9. `app/src/main/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockScreen.kt`
+   - **Why Modified:** Passed `enabled = !uiState.isLocked` to `PinKeypad` and triggered `HapticFeedbackType.LongPress` when lockout triggers.
+10. `app/src/test/java/com/uniquemakeover/admin/core/security/PinLockManagerTest.kt`
+    - **Why Modified:** Added test cases for five consecutive failures triggering lockout, rejection while locked, counter reset on correct PIN, and initial unlocked state.
+11. `app/src/test/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockViewModelTest.kt`
+    - **Why Modified:** Added unit tests verifying locked state emission on 5th failure, input dropping during lockout, and UI restoration when lockout transitions to unlocked.
+12. `app/src/test/java/com/uniquemakeover/admin/feature/auth/presentation/PinLockScreenTest.kt`
+    - **Why Modified:** Added Compose test case asserting countdown text is displayed and keypad is disabled when `uiState.isLocked` is true.
 
 ---
 

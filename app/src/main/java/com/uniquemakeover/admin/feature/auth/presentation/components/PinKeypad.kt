@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -31,17 +32,21 @@ import com.uniquemakeover.admin.core.ui.theme.SurfaceCard
 import com.uniquemakeover.admin.core.ui.theme.TextPrimary
 
 private val BUTTON_SIZE = 72.dp
+private const val DISABLED_ALPHA = 0.38f
 
 @Composable
 fun PinKeypad(
     onDigitClick: (Char) -> Unit,
     onBackspace: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     val haptic = LocalHapticFeedback.current
 
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(if (enabled) 1f else DISABLED_ALPHA),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -59,43 +64,65 @@ fun PinKeypad(
                 rowDigits.forEach { digit ->
                     KeypadDigitButton(
                         digit = digit,
+                        enabled = enabled,
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onDigitClick(digit)
+                            if (enabled) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onDigitClick(digit)
+                            }
                         }
                     )
                 }
             }
         }
 
-        // 4th row: Empty spacer, '0', Backspace
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(28.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(modifier = Modifier.size(BUTTON_SIZE))
+        KeypadBottomRow(
+            enabled = enabled,
+            onDigitClick = onDigitClick,
+            onBackspace = onBackspace
+        )
+    }
+}
 
-            KeypadDigitButton(
-                digit = '0',
-                onClick = {
+@Composable
+private fun KeypadBottomRow(
+    enabled: Boolean,
+    onDigitClick: (Char) -> Unit,
+    onBackspace: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(28.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(modifier = Modifier.size(BUTTON_SIZE))
+
+        KeypadDigitButton(
+            digit = '0',
+            enabled = enabled,
+            onClick = {
+                if (enabled) {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onDigitClick('0')
                 }
-            )
+            }
+        )
 
-            KeypadActionButton(
-                onClick = {
+        KeypadActionButton(
+            enabled = enabled,
+            onClick = {
+                if (enabled) {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onBackspace()
                 }
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.Backspace,
-                    contentDescription = "Backspace",
-                    tint = BrandPrimary,
-                    modifier = Modifier.size(28.dp)
-                )
             }
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.Backspace,
+                contentDescription = "Backspace",
+                tint = BrandPrimary,
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }
@@ -104,13 +131,15 @@ fun PinKeypad(
 private fun KeypadDigitButton(
     digit: Char,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Card(
         modifier = modifier
             .size(BUTTON_SIZE)
             .clip(CircleShape)
             .clickable(
+                enabled = enabled,
                 role = Role.Button,
                 onClick = onClick
             ),
@@ -138,6 +167,7 @@ private fun KeypadDigitButton(
 private fun KeypadActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
     Card(
@@ -145,6 +175,7 @@ private fun KeypadActionButton(
             .size(BUTTON_SIZE)
             .clip(CircleShape)
             .clickable(
+                enabled = enabled,
                 role = Role.Button,
                 onClick = onClick
             ),

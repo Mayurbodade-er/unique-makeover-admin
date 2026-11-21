@@ -51,7 +51,6 @@ fun PinLockRoute(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
-    // AC-AUTH-01.3: Hardware back button exits the app immediately
     BackHandler {
         (context as? Activity)?.finish()
     }
@@ -62,8 +61,14 @@ fun PinLockRoute(
         }
     }
 
+    LaunchedEffect(uiState.isLocked) {
+        if (uiState.isLocked) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
+
     LaunchedEffect(uiState.isError) {
-        if (uiState.isError) {
+        if (uiState.isError && !uiState.isLocked) {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         }
     }
@@ -99,6 +104,7 @@ fun PinLockScreen(
         PinKeypad(
             onDigitClick = onDigitClick,
             onBackspace = onBackspace,
+            enabled = !uiState.isLocked,
             modifier = Modifier.padding(bottom = 16.dp)
         )
     }

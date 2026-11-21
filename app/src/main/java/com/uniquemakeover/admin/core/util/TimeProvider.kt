@@ -15,6 +15,7 @@ interface TimeProvider {
         }.getOrDefault("")
     }
     fun currentTimeMillis(): Long
+    fun elapsedRealtime(): Long = currentTimeMillis()
 }
 
 @Singleton
@@ -30,4 +31,6 @@ class DefaultTimeProvider @Inject constructor() : TimeProvider {
     override fun tomorrowDate(): String = LocalDate.now().plusDays(1).format(dateFormatter)
 
     override fun currentTimeMillis(): Long = System.currentTimeMillis()
+
+    override fun elapsedRealtime(): Long = android.os.SystemClock.elapsedRealtime()
 }
