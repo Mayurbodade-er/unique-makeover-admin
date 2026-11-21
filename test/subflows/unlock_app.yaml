@@ -1,0 +1,14 @@
+# Unique Makeover Admin Console — Maestro E2E Subflow: Unlock App
+# Slice Reference: Slice #03 (US-AUTH-01: App Cold-Start PIN Verification Gate)
+# Default Admin PIN: 1234
+
+appId: com.uniquemakeover.admin.debug
+---
+- runFlow:
+    when:
+      visible: "Enter Admin PIN"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "3"
+      - tapOn: "4"

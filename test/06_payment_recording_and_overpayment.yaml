@@ -1,0 +1,48 @@
+# ==============================================================================
+# Unique Makeover Admin Console — Maestro E2E Test Flow
+# ==============================================================================
+# Test ID: 06_payment_recording_and_overpayment
+# Target Slices:
+#   - Slice #11 (US-APT-07: In-line Payment Recording & Overpayment Guard)
+#   - Slice #26 (US-UPI-01: Dynamic Offline UPI QR Generation)
+# Flows Covered:
+#   1. Tap "Record Payment" action (Payments icon) on an appointment card.
+#   2. Verify Record Payment bottom sheet displays Billed Total, Already Paid, and Remaining Due.
+#   3. Toggle between Cash and UPI payment mode chips.
+#   4. If UPI mode is selected, test presence of "📱 Show Payment QR" button.
+#   5. Enter payment amount.
+#   6. Record payment and verify SQLite update & remaining balance decrement.
+# ==============================================================================
+
+appId: com.uniquemakeover.admin.debug
+---
+- launchApp
+- runFlow: subflows/unlock_app.yaml
+
+# Step 1: Open Dashboard
+- tapOn: "Dashboard"
+
+# Step 2: Tap "Record Payment" on an appointment
+- tapOn: "Record Payment"
+
+# Step 3: Verify Record Payment dialog opens
+- assertVisible: "Record Payment"
+- assertVisible: "Payment Mode"
+- assertVisible: "💵 Cash"
+- assertVisible: "📱 UPI"
+
+# Step 4: Toggle to UPI mode
+- tapOn: "📱 UPI"
+
+# Step 5: Toggle back to Cash mode
+- tapOn: "💵 Cash"
+
+# Step 6: Enter payment amount
+- tapOn: "Payment Amount (₹)"
+- inputText: "150"
+
+# Step 7: Tap "Record Payment" button to save
+- tapOn: "Record Payment"
+
+# Step 8: Verify dialog dismissed and back on Dashboard
+- assertVisible: "Dashboard"

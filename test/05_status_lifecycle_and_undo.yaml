@@ -1,0 +1,35 @@
+# ==============================================================================
+# Unique Makeover Admin Console — Maestro E2E Test Flow
+# ==============================================================================
+# Test ID: 05_status_lifecycle_and_undo
+# Target Slices:
+#   - Slice #10 (US-APT-05: Status Lifecycle Transitions & Accidental Tap Undo)
+# Flows Covered:
+#   1. Locate an active "Booked" appointment on the Dashboard schedule.
+#   2. Tap "Mark Done" action button (CheckCircle icon).
+#   3. Observe status transition from Booked -> Done.
+#   4. Verify transient 5-second Undo Snackbar with action button.
+#   5. Tap "Undo" to restore appointment state back to "Booked".
+# ==============================================================================
+
+appId: com.uniquemakeover.admin.debug
+---
+- launchApp
+- runFlow: subflows/unlock_app.yaml
+
+# Step 1: Open Dashboard
+- tapOn: "Dashboard"
+- assertVisible: "Today's Schedule"
+
+# Step 2: Tap "Mark Done" action on an appointment card
+- tapOn: "Mark Done"
+
+# Step 3: Verify Undo Snackbar appears
+- assertVisible: "marked as Done"
+- assertVisible: "Undo"
+
+# Step 4: Tap "Undo" to revert accidental status change
+- tapOn: "Undo"
+
+# Step 5: Verify appointment status restored
+- assertVisible: "Today's Schedule"

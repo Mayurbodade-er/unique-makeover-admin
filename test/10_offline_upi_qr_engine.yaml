@@ -1,0 +1,65 @@
+# ==============================================================================
+# Unique Makeover Admin Console — Maestro E2E Test Flow
+# ==============================================================================
+# Test ID: 10_offline_upi_qr_engine
+# Target Slices:
+#   - Slice #25 (US-UPI-05: Missing UPI Configuration Blocking Alert)
+#   - Slice #26 (US-UPI-01: Dynamic Offline UPI QR Generation using ZXing Core)
+#   - Slice #27 (US-UPI-02: Payment Amount Preset Calculations - 30% Advance & Balance)
+#   - Slice #28 (US-UPI-03: WhatsApp Direct UPI Payment Link Dispatch)
+#   - Slice #29 (US-UPI-04: QR Code Image Export & Native Share Sheet)
+# Flows Covered:
+#   1. Access UPI QR Screen from Record Payment or Deep Link.
+#   2. Verify Guard Banner if merchant UPI ID is unconfigured, OR QR Canvas if configured.
+#   3. Test 1-Tap Preset Calculation Chips:
+#      - Balance Due preset
+#      - 30% Advance preset
+#      - Full Payment preset
+#      - Custom Amount preset
+#   4. Test Action Buttons:
+#      - Send Payment Link on WhatsApp
+#      - Save to Gallery
+#      - Share QR
+# ==============================================================================
+
+appId: com.uniquemakeover.admin.debug
+---
+- launchApp
+- runFlow: subflows/unlock_app.yaml
+
+# Step 1: Open Dashboard
+- tapOn: "Dashboard"
+
+# Step 2: Open Record Payment on an appointment
+- tapOn: "Record Payment"
+- assertVisible: "Record Payment"
+
+# Step 3: Switch to UPI mode
+- tapOn: "📱 UPI"
+
+# Step 4: Tap "Show Payment QR" button
+- tapOn: "📱 Show Payment QR"
+
+# Step 5: Verify UPI QR screen
+- assertVisible: "Payment QR"
+
+# Step 6: Test Preset Selection Chips (if merchant UPI ID is configured)
+- runFlow:
+    when:
+      visible: "preset_chip_full"
+    commands:
+      - tapOn: "preset_chip_full"
+      - tapOn: "preset_chip_advance"
+      - tapOn: "preset_chip_balance"
+
+# Step 7: Verify Action Buttons are visible
+- assertVisible:
+    text: "Share QR"
+    optional: true
+- assertVisible:
+    text: "Save to Gallery"
+    optional: true
+
+# Step 8: Return back to previous screen
+- back
+- assertVisible: "Dashboard"

@@ -1,0 +1,64 @@
+# ==============================================================================
+# Unique Makeover Admin Console — Maestro E2E Test Flow
+# ==============================================================================
+# Test ID: 08_clients_crm_notes_rebooking
+# Target Slices:
+#   - Slice #16 (US-CRM-01: Client Directory & Automated History Aggregation)
+#   - Slice #17 (US-CRM-02: Instant Client Search by Name or Mobile)
+#   - Slice #18 (US-CRM-03: Detailed Client History & Lifetime Metrics)
+#   - Slice #19 (US-CRM-04: Private Client Skin & Hair Notes with Autosave)
+#   - Slice #20 (US-CRM-05: 1-Tap Quick Rebooking Pre-Fill)
+# Flows Covered:
+#   1. Navigate to Clients CRM Directory.
+#   2. Search client by substring name or 10-digit mobile number.
+#   3. Tap client card to open Client Detail Screen.
+#   4. Verify Lifetime Metrics (Total Visits, Total Spend, Outstanding Balance).
+#   5. Switch to Private Notes tab, enter skin/hair sensitivities, observe 500ms autosave.
+#   6. Tap "Quick Rebook" button and verify pre-filled Booking Sheet.
+# ==============================================================================
+
+appId: com.uniquemakeover.admin.debug
+---
+- launchApp
+- runFlow: subflows/unlock_app.yaml
+
+# Step 1: Open Clients CRM
+- tapOn: "Clients"
+- assertVisible: "Clients Directory"
+
+# Step 2: Instant Client Search
+- tapOn: "Search clients by name or phone..."
+- inputText: "Anjali"
+
+# Step 3: Select client card to view details
+- tapOn: "Anjali Patil"
+
+# Step 4: Verify Client Detail metrics
+- assertVisible: "Client Profile"
+- assertVisible: "Total Visits"
+- assertVisible: "Total Spend"
+
+# Step 5: Switch to "Private Notes" tab
+- tapOn: "Private Notes"
+- assertVisible: "Private Client Notes"
+
+# Step 6: Test Notes Autosave
+- tapOn: "Record skin sensitivities, allergies, hair color formulas..."
+- inputText: "Allergic to harsh bleaching agents. Prefers herbal treatments."
+
+# Step 7: Wait 1 second for debounced Room autosave
+- extendedWaitUntil:
+    visible: "Saved ✓"
+    timeout: 3000
+
+# Step 8: Return to Visit History tab
+- tapOn: "Visit History"
+
+# Step 9: Test Quick Rebook button
+- tapOn: "Quick Rebook"
+- assertVisible: "New Appointment"
+- assertVisible: "Anjali Patil"
+- assertVisible: "9876543210"
+
+# Step 10: Dismiss booking sheet
+- back

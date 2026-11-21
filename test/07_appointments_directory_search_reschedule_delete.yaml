@@ -1,0 +1,50 @@
+# ==============================================================================
+# Unique Makeover Admin Console — Maestro E2E Test Flow
+# ==============================================================================
+# Test ID: 07_appointments_directory_search_reschedule_delete
+# Target Slices:
+#   - Slice #07 (US-APT-01: Filtered Appointment Directory & Substring Search)
+#   - Slice #12 (US-APT-04: Appointment Rescheduling & Conflict-Aware Editing)
+#   - Slice #13 (US-APT-06: Hard Deletion of Appointment with Guardrail)
+# Flows Covered:
+#   1. Navigate to Appointments directory.
+#   2. Test substring search by client name or mobile digits.
+#   3. Switch status filter tabs: All, Upcoming, Completed, Cancelled.
+#   4. Open Appointment in edit mode ("Edit"), verify pre-filled data.
+#   5. Trigger permanent deletion ("Delete" icon), verify ConfirmDialog guardrail.
+# ==============================================================================
+
+appId: com.uniquemakeover.admin.debug
+---
+- launchApp
+- runFlow: subflows/unlock_app.yaml
+
+# Step 1: Open Appointments screen
+- tapOn: "Appointments"
+- assertVisible: "Appointments"
+
+# Step 2: Test Substring Search in top search bar
+- tapOn: "Search name, phone or service..."
+- inputText: "Anjali"
+- assertVisible: "Anjali Patil"
+
+# Step 3: Clear search
+- tapOn: "Clear search"
+    optional: true
+
+# Step 4: Test Filter Tabs
+- tapOn: "Upcoming"
+- tapOn: "Completed"
+- tapOn: "All"
+
+# Step 5: Test Delete Guardrail Dialog
+- tapOn:
+    text: "Delete"
+    optional: true
+- runFlow:
+    when:
+      visible: "Delete Appointment?"
+    commands:
+      - assertVisible: "Delete Appointment?"
+      # Cancel deletion to protect sample data
+      - tapOn: "Cancel"

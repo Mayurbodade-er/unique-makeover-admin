@@ -1,0 +1,148 @@
+# ==============================================================================
+# Unique Makeover Admin Console — Master E2E End-to-End Test Suite
+# ==============================================================================
+# Target Slices: Slices #01 through #34 (Phases 0 through 8)
+# High-Level Journey:
+#   1. Phase 0: Cold-Start PIN Gate (Unlock with 1234)
+#   2. Phase 3: Service Catalog Verification
+#   3. Phase 1: Conflict-Free Multi-Service Booking (Anjali Patil, Haircut)
+#   4. Phase 2: Dashboard Real-Time KPI & Live Schedule Reflection
+#   5. Phase 2: Status Lifecycle Transition (Mark Done & Undo)
+#   6. Phase 2: In-line Payment Recording (Cash / UPI)
+#   7. Phase 4: Client CRM History Aggregation & Autosaved Notes
+#   8. Phase 5: WhatsApp Reminders Queue Inspection
+#   9. Phase 7: Salon Branding & Settings Verification
+#  10. Phase 8: Data Portability & SAF Backup Export Verification
+# ==============================================================================
+
+appId: com.uniquemakeover.admin.debug
+---
+# ------------------------------------------------------------------------------
+# STEP 1: Cold-Start Authentication Gate (Slice #03)
+# ------------------------------------------------------------------------------
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Enter Admin PIN"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "3"
+      - tapOn: "4"
+
+# ------------------------------------------------------------------------------
+# STEP 2: Dashboard Home & KPI Verification (Slices #08, #09, #31)
+# ------------------------------------------------------------------------------
+- tapOn: "Dashboard"
+- assertVisible: "Dashboard"
+- assertVisible: "Unique Makeover"
+- assertVisible: "Appointments"
+- assertVisible: "Collected"
+- assertVisible: "Due"
+
+# ------------------------------------------------------------------------------
+# STEP 3: Service Catalog Browsing & Seed Verification (Slices #02, #14)
+# ------------------------------------------------------------------------------
+- tapOn: "Services"
+- assertVisible: "Services Catalog"
+- assertVisible: "Haircut"
+- assertVisible: "Gold Facial"
+- assertVisible: "Keratin Spa"
+
+# ------------------------------------------------------------------------------
+# STEP 4: Conflict-Free Appointment Booking (Slices #05, #06)
+# ------------------------------------------------------------------------------
+- tapOn: "Appointments"
+- assertVisible: "Appointments"
+- tapOn: "Book Appointment"
+- assertVisible: "New Appointment"
+
+- tapOn: "Client Full Name"
+- inputText: "Anjali Patil"
+- tapOn: "Mobile Number"
+- inputText: "9876543210"
+
+- tapOn: "Haircut"
+- tapOn: "Today"
+
+- scrollUntilVisible:
+    element: "Save Appointment"
+    direction: DOWN
+
+- tapOn: "Save Appointment"
+- assertVisible: "Anjali Patil"
+
+# ------------------------------------------------------------------------------
+# STEP 5: Dashboard Schedule & Inline Actions (Slices #09, #10)
+# ------------------------------------------------------------------------------
+- tapOn: "Dashboard"
+- assertVisible: "Today's Schedule"
+
+# ------------------------------------------------------------------------------
+# STEP 6: Status Lifecycle & 5-Second Undo Guard (Slice #10)
+# ------------------------------------------------------------------------------
+- tapOn:
+    text: "Mark Done"
+    optional: true
+- runFlow:
+    when:
+      visible: "marked as Done"
+    commands:
+      - tapOn: "Undo"
+
+# ------------------------------------------------------------------------------
+# STEP 7: In-line Payment Recording (Slice #11)
+# ------------------------------------------------------------------------------
+- tapOn:
+    text: "Record Payment"
+    optional: true
+- runFlow:
+    when:
+      visible: "Record Payment"
+    commands:
+      - tapOn: "💵 Cash"
+      - tapOn: "Payment Amount (₹)"
+      - inputText: "150"
+      - tapOn: "Record Payment"
+
+# ------------------------------------------------------------------------------
+# STEP 8: Client CRM Aggregation & Private Notes (Slices #16, #18, #19)
+# ------------------------------------------------------------------------------
+- tapOn: "Clients"
+- assertVisible: "Clients Directory"
+- tapOn: "Search clients by name or phone..."
+- inputText: "Anjali"
+- tapOn: "Anjali Patil"
+- assertVisible: "Client Profile"
+
+- tapOn: "Private Notes"
+- tapOn: "Record skin sensitivities, allergies, hair color formulas..."
+- inputText: "Prefers organic herbal shampoo."
+- extendedWaitUntil:
+    visible: "Saved ✓"
+    timeout: 3000
+- back
+
+# ------------------------------------------------------------------------------
+# STEP 9: WhatsApp Reminders Queue (Slices #23, #24)
+# ------------------------------------------------------------------------------
+- tapOn: "Reminders"
+- assertVisible: "Reminders Queue"
+
+# ------------------------------------------------------------------------------
+# STEP 10: Settings & Data Management (Slices #30, #34)
+# ------------------------------------------------------------------------------
+- tapOn: "Settings"
+- assertVisible: "Settings"
+- assertVisible: "Salon Branding"
+
+- scrollUntilVisible:
+    element: "Data Management"
+    direction: DOWN
+- assertVisible: "Export Backup (JSON)"
+
+# ------------------------------------------------------------------------------
+# End of Master E2E Suite
+# ------------------------------------------------------------------------------

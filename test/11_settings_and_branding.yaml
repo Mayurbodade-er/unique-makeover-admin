@@ -1,0 +1,63 @@
+# ==============================================================================
+# Unique Makeover Admin Console — Maestro E2E Test Flow
+# ==============================================================================
+# Test ID: 11_settings_and_branding
+# Target Slices:
+#   - Slice #30 (US-SET-01: Salon Branding Setup - Logo Crop & Wallpaper)
+#   - Slice #04 (US-SET-02: Business Operating Hours, Slot Duration & Staff)
+#   - Slice #21 (US-SET-03: Communication Settings - WhatsApp & UPI Config)
+#   - Slice #22 (US-REM-03: Dynamic Reminder Template Substitution & Preview)
+#   - Slice #33 (US-AUTH-03: Admin PIN Modification with Existing Validation)
+# Flows Covered:
+#   1. Navigate to Settings screen.
+#   2. Inspect all 6 configuration sections:
+#      - Salon Branding (Shop name, tagline, logo, wallpaper)
+#      - Business Operations (Operating hours, slot duration, staff list)
+#      - Communication & Payments (Salon contact number, Merchant UPI ID)
+#      - Reminder Message Template (Tokens preview, custom message body)
+#      - Access Control (Change Admin PIN workflow)
+#      - Data Management (Backup export)
+#   3. Test editing and saving operations / communication values.
+# ==============================================================================
+
+appId: com.uniquemakeover.admin.debug
+---
+- launchApp
+- runFlow: subflows/unlock_app.yaml
+
+# Step 1: Open Settings screen
+- tapOn: "Settings"
+- assertVisible: "Settings"
+
+# Step 2: Verify Salon Branding section
+- assertVisible: "Salon Branding"
+- assertVisible: "Shop Name"
+- assertVisible: "Save Branding"
+
+# Step 3: Scroll to Business Operations section
+- scrollUntilVisible:
+    element: "Business Operations"
+    direction: DOWN
+- assertVisible: "Business Operations"
+- assertVisible: "Save Operations"
+
+# Step 4: Scroll to Communication & WhatsApp section
+- scrollUntilVisible:
+    element: "Communication & Payments"
+    direction: DOWN
+- assertVisible: "Communication & Payments"
+- assertVisible: "Save Communication"
+
+# Step 5: Scroll to Reminder Template section
+- scrollUntilVisible:
+    element: "Reminder Message Template"
+    direction: DOWN
+- assertVisible: "Reminder Message Template"
+- assertVisible: "Live Preview"
+
+# Step 6: Scroll to Access Control (PIN) section
+- scrollUntilVisible:
+    element: "Access Control"
+    direction: DOWN
+- assertVisible: "Access Control"
+- assertVisible: "Change Admin PIN"

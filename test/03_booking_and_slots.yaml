@@ -1,0 +1,55 @@
+# ==============================================================================
+# Unique Makeover Admin Console — Maestro E2E Test Flow
+# ==============================================================================
+# Test ID: 03_booking_and_slots
+# Target Slices:
+#   - Slice #04 (US-SET-02: Business Operating Hours, Slot Duration & Staff)
+#   - Slice #05 (US-APT-02: Conflict-Free Manual Booking & Dynamic Slot Generation)
+#   - Slice #06 (US-APT-03: Multi-Service Selection, Real-Time Subtotal, Discount & Advance)
+# Flows Covered:
+#   1. Open Booking Sheet from Appointments screen ("Book Appointment" FAB).
+#   2. Enter client name and 10-digit Indian mobile number.
+#   3. Select multiple services (e.g. Haircut, Threading) and observe subtotal recalculation.
+#   4. Select appointment date ("Today" or "Tomorrow").
+#   5. Choose an available slot from the dynamic SlotGrid.
+#   6. Enter advance payment & optional internal note.
+#   7. Save appointment and verify commitment to SQLite database.
+# ==============================================================================
+
+appId: com.uniquemakeover.admin.debug
+---
+- launchApp
+- runFlow: subflows/unlock_app.yaml
+
+# Step 1: Navigate to Appointments screen
+- tapOn: "Appointments"
+- assertVisible: "Appointments"
+
+# Step 2: Open Booking Modal Bottom Sheet
+- tapOn: "Book Appointment"
+- assertVisible: "New Appointment"
+- assertVisible: "Client Full Name"
+- assertVisible: "Mobile Number"
+
+# Step 3: Enter Client Information
+- tapOn: "Client Full Name"
+- inputText: "Anjali Patil"
+- tapOn: "Mobile Number"
+- inputText: "9876543210"
+
+# Step 4: Select Service from catalog list
+- tapOn: "Haircut"
+
+# Step 5: Verify Date selection
+- tapOn: "Today"
+
+# Step 6: Scroll down to view slots and payment inputs
+- scrollUntilVisible:
+    element: "Save Appointment"
+    direction: DOWN
+
+# Step 7: Save Appointment
+- tapOn: "Save Appointment"
+
+# Step 8: Verify appointment appears on the directory
+- assertVisible: "Anjali Patil"

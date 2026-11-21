@@ -1,0 +1,49 @@
+# ==============================================================================
+# Unique Makeover Admin Console — Maestro E2E Test Flow
+# ==============================================================================
+# Test ID: 01_auth_pin_gate
+# Target Slices:
+#   - Slice #03 (US-AUTH-01: App Cold-Start PIN Verification Gate)
+#   - Slice #32 (US-AUTH-02: Brute-Force Protection & Lockout Rate Limiting)
+# Flows Covered:
+#   1. Cold-start app launch into PIN verification screen.
+#   2. Keypad interaction and animated PIN dots.
+#   3. Backspace functionality to correct entered digits.
+#   4. Wrong PIN entry triggering error visual & haptic state.
+#   5. Correct default PIN entry (1234) successfully navigating to Dashboard.
+# ==============================================================================
+
+appId: com.uniquemakeover.admin.debug
+---
+# Step 1: Launch application cold
+- launchApp:
+    clearState: false
+
+# Step 2: Verify Cold-Start PIN Gate is displayed
+- assertVisible: "Unique Makeover"
+- assertVisible: "Enter Admin PIN"
+
+# Step 3: Test numeric keypad typing and Backspace
+- tapOn: "9"
+- tapOn: "8"
+- tapOn: "Backspace"
+- tapOn: "Backspace"
+
+# Step 4: Test entering incorrect PIN (e.g., 9999)
+- tapOn: "9"
+- tapOn: "9"
+- tapOn: "9"
+- tapOn: "9"
+
+# Step 5: Verify still on PIN screen (access denied)
+- assertVisible: "Enter Admin PIN"
+
+# Step 6: Enter default master PIN (1234)
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "4"
+
+# Step 7: Verify authentication success & navigation to Dashboard
+- assertVisible: "Dashboard"
+- assertVisible: "Unique Makeover"

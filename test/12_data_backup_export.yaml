@@ -1,0 +1,44 @@
+# ==============================================================================
+# Unique Makeover Admin Console — Maestro E2E Test Flow
+# ==============================================================================
+# Test ID: 12_data_backup_export
+# Target Slices:
+#   - Slice #34 (US-DAT-01: Full Database JSON Export via Storage Access Framework)
+#   - Slice #36 (US-DAT-03: Overdue Backup Detection & Warning)
+# Flows Covered:
+#   1. Navigate to Settings screen.
+#   2. Scroll to Data Management Section.
+#   3. Verify "Export Backup (JSON)" button.
+#   4. Verify last backup status text (timestamp and overdue detection).
+#   5. Trigger SAF Document creation intent.
+# ==============================================================================
+
+appId: com.uniquemakeover.admin.debug
+---
+- launchApp
+- runFlow: subflows/unlock_app.yaml
+
+# Step 1: Open Settings screen
+- tapOn: "Settings"
+- assertVisible: "Settings"
+
+# Step 2: Scroll down to Data Management section
+- scrollUntilVisible:
+    element: "Data Management"
+    direction: DOWN
+
+# Step 3: Verify Data Management UI elements
+- assertVisible: "Data Management"
+- assertVisible: "Export Backup (JSON)"
+
+# Step 4: Verify backup status indicator
+- assertVisible:
+    text: "Last backup:"
+    optional: true
+
+# Step 5: Test Export Button presence and clickability
+- tapOn: "Export Backup (JSON)"
+
+# Step 6: Return back to app from SAF file picker
+- back
+- assertVisible: "Settings"

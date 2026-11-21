@@ -1,0 +1,48 @@
+# ==============================================================================
+# Unique Makeover Admin Console — Maestro E2E Test Flow
+# ==============================================================================
+# Test ID: 02_services_catalog
+# Target Slices:
+#   - Slice #02 (US-SVC-01: Service Catalog Browsing & Seed Data Initialization)
+#   - Slice #14 (US-SVC-02: Service Catalog CRUD with Snapshot Safety)
+#   - Slice #15 (US-SVC-03: Service Reference Photo Acquisition & Local Compression)
+# Flows Covered:
+#   1. Navigate to Services Catalog screen.
+#   2. Verify seeded catalog services (Haircut, Gold Facial, Keratin Spa, Bridal Package).
+#   3. Open Add Service bottom sheet via Floating Action Button.
+#   4. Validate form inputs (Service Name, Rate in ₹).
+#   5. Save new custom beauty service and verify appearance in catalog grid.
+# ==============================================================================
+
+appId: com.uniquemakeover.admin.debug
+---
+- launchApp
+- runFlow: subflows/unlock_app.yaml
+
+# Step 1: Navigate to Services screen via Navigation Bar
+- tapOn: "Services"
+- assertVisible: "Services Catalog"
+
+# Step 2: Verify default seeded services exist in catalog
+- assertVisible: "Haircut"
+- assertVisible: "Gold Facial"
+- assertVisible: "Keratin Spa"
+
+# Step 3: Open "Add Service" sheet via Floating Action Button
+- tapOn: "Add Service"
+- assertVisible: "Add Service"
+- assertVisible: "Service Name"
+- assertVisible: "Service Rate"
+
+# Step 4: Fill in new service details
+- tapOn: "Service Name"
+- inputText: "Express Cleanup"
+- tapOn: "Service Rate"
+- inputText: "350"
+
+# Step 5: Save service
+- tapOn: "Save Service"
+
+# Step 6: Verify new service is displayed in the catalog
+- assertVisible: "Express Cleanup"
+- assertVisible: "350"

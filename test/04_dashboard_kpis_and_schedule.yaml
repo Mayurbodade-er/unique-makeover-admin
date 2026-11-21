@@ -1,0 +1,47 @@
+# ==============================================================================
+# Unique Makeover Admin Console — Maestro E2E Test Flow
+# ==============================================================================
+# Test ID: 04_dashboard_kpis_and_schedule
+# Target Slices:
+#   - Slice #08 (US-DASH-01: Real-Time Operational & Financial KPIs)
+#   - Slice #09 (US-DASH-03: Today's Live Schedule Stream & Quick Actions)
+#   - Slice #31 (US-DASH-02: Actionable System Alert Banners & Deep Linking)
+# Flows Covered:
+#   1. Navigate to Dashboard home screen.
+#   2. Verify Salon Branding header & today's date banner.
+#   3. Check Real-Time Financial & Operational KPI cards:
+#      - Appointments Count (Booked / Done / Total)
+#      - Revenue Collected vs Balance Due
+#   4. Verify Today's Chronological Schedule stream.
+#   5. Inspect Quick Action icons on appointment cards:
+#      - Mark Done (✅), WhatsApp (💬), Record Payment (💳), Edit (✏️), Cancel (❌).
+#   6. Verify Actionable Alert Banners if communication or backup alerts trigger.
+# ==============================================================================
+
+appId: com.uniquemakeover.admin.debug
+---
+- launchApp
+- runFlow: subflows/unlock_app.yaml
+
+# Step 1: Ensure on Dashboard
+- tapOn: "Dashboard"
+- assertVisible: "Dashboard"
+
+# Step 2: Verify Salon Branding header
+- assertVisible: "Unique Makeover"
+
+# Step 3: Verify KPI Metrics Cards
+- assertVisible: "Appointments"
+- assertVisible: "Collected"
+- assertVisible: "Due"
+
+# Step 4: Verify Today's Schedule Section
+- assertVisible: "Today's Schedule"
+
+# Step 5: Verify presence of action buttons on schedule cards
+- assertVisible:
+    text: "Mark Done"
+    optional: true
+- assertVisible:
+    text: "Record Payment"
+    optional: true
